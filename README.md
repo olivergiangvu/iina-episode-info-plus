@@ -8,7 +8,9 @@ Maintained as an independent fork of [Zain Imam's Episode Info](https://github.c
 
 ## Episode Info Plus features
 
-**beta.3 accessibility fix:** targeted macOS Light Mode contrast correction for nested section headings, language labels, light-theme selected tabs, disabled subtitle/search controls, warnings and theme sliders. Dark Mode and stored preferences are not changed.
+**Stable release v0.1.0** — promoted from beta.3 after IINA/macOS real-world validation of automatic episode lookup and Light/Dark UI. Playback-matching behavior, local settings/storage keys, subtitle sources and overlay functionality are unchanged.
+
+**Stable v0.1.0 includes the beta.3 accessibility fix:** targeted macOS Light Mode contrast correction for nested section headings, language labels, light-theme selected tabs, disabled subtitle/search controls, warnings and theme sliders. Dark Mode and stored preferences are not changed.
 
 - Playback metadata: explicit IMDb/TMDB IDs, normalized filenames, Comet streaming URLs and Stremio IDs; improved embedded filename parsing (DMM) and safe MediaFusion season/episode route hints.
 - Two-stage lookup: a clearly marked **provisional** identity appears immediately when playback signals agree; TMDB fills in poster, synopsis and episode metadata later.
@@ -24,9 +26,9 @@ Open **IINA → Settings/Preferences → Plugins → Install from GitHub** and e
 https://github.com/olivergiangvu/iina-episode-info-plus
 ```
 
-Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest beta: **0.1.0-beta.3**. The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
+Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **0.1.0**. The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
 
-GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (currently 2). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
+GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (currently 4). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
 
 ## Preserving settings
 
@@ -51,7 +53,7 @@ Provisional IMDb + filename association is not yet proof that the provider ID be
 
 ## Development and releases
 
-Changes are validated in a branch and PR before merging into `main`. CI tests matching fixtures, UI scripts and `.iinaplgz` archive integrity. New plugin versions must increase both `version` and integer `ghVersion`; the release workflow publishes the matching beta artifact after a merge to `main`.
+Changes are validated in a branch and PR before merging into `main`. CI tests matching fixtures, UI scripts and `.iinaplgz` archive integrity. New plugin versions must increase both `version` and integer `ghVersion`; the release workflow publishes the matching stable or prerelease artifact after a merge to `main`.
 
 ## Attribution
 

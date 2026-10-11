@@ -64,6 +64,6 @@ assert(!lightCSS.includes("body .thm.on { background:rgba(229,9,20,.22)"),"Faded
 const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,"../Info.json"),"utf8"));
 assert.equal(manifest.identifier,"io.github.olivergiangvu.iinaepisodeinfoplus");
 assert.equal(manifest.ghRepo,"olivergiangvu/iina-episode-info-plus");
-assert.equal(manifest.ghVersion,3);
-assert.equal(manifest.version,"0.1.0-beta.3");
+assert.equal(manifest.ghVersion,4);
+assert.equal(manifest.version,"0.1.0");
 console.log("Episode Info Plus: 16+ identity, integration and theme assertions PASS");
