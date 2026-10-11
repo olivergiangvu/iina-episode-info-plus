@@ -1,6 +1,7 @@
-// IINA Plugin: Episode Info v1.3.3
+// IINA Plugin: Episode Info Plus v0.1.0-beta.1
 
 const { core, event, utils, file, menu } = iina;
+const episodePlusIdentity = require("./episode-plus-identity.js");
 // Messages to the overlay and sidebar go through messageSafe()
 const overlay = safeMessenger(iina.overlay, ["loadFile", "onMessage", "show", "hide", "setClickable"]);
 const sidebar = safeMessenger(iina.sidebar, ["loadFile", "onMessage"]);
@@ -911,6 +912,19 @@ async function alReadings(h, link) {
     try { sn = await alStremioName(st); } catch (e) { sn = null; }
     if (sn) out.push(alReading(sn.file, sn.folder ? [sn.folder] : [], "Stremio"));
   }
+  // DMM/mpv can put the real filename inside an opaque player label:
+  // 98800072:1?h=<hash>&file=Better.Call.Saul.S03E03.mkv
+  // Never treat the opaque prefix or its hash as a media title.
+  ["filename", "mediaTitle", "metadataTitle"].forEach(function(key) {
+    var label = String(h[key] || "");
+    var m = /[?&](?:file|filename|fn|torrent_name)=([^&#]+)/i.exec(label);
+    if (m && m[1]) {
+      var extracted = alDecode(m[1], true);
+      if (extracted && extracted.length <= 500 && !/^https?:\/\//i.test(extracted)) {
+        out.push(alReading(extracted, [], "embedded-stream-filename"));
+      }
+    }
+  });
   ["filename", "file", "fn", "name", "title", "torrent_name"].forEach(function(k) {
     var v = alQuery(link, k);
     if (v) out.push(alReading(v, [], "link"));
@@ -1277,24 +1291,58 @@ function alSeconds() {
 
 // Only answer if that file is still playing
 async function autoLookup(d) {
-  var forUrl = currentVideoUrl;
-  if (!d || !d.url || d.url !== forUrl) return;
-  var reply = { url: forUrl, info: null, query: "", reason: "" };
+  var forUrl=currentVideoUrl;
+  if(!d||!d.url||d.url!==forUrl)return;
+  var fast=null,reply={url:forUrl,info:null,query:"",reason:""};
+  // Identity first. TMDB is an enhancement, not a single point of failure.
   try {
-    var out = await alLookup(alHints(), alSeconds);
-    reply.info = out.info || null;
-    reply.query = out.query || "";
-    reply.reason = out.reason || "";
-    if (out.info) reply.info.auto = { from: out.from || "" };
-  } catch (e) {
-    reply.reason = "the lookup failed (" + errStr(e) + ")";
-  }
+    var hints=alHints(),ids=episodePlusIdentity.inspectUrls(hints);
+    if(ids.conflict){
+      sidebar.postMessage("autoLookupResult",{url:forUrl,info:null,reason:"Conflicting explicit playback IDs; manual match required"});
+      return;
+    }
+    var readings=await alReadings(hints,alSplitLink(hints.path||hints.url||""));
+    // Provider URL route and readable filename must not disagree on episode position.
+    var conflictingPosition=readings.some(function(rd){var p=rd&&rd.p;
+      return p&&p.episode!=null&&p.season!=null&&
+        ((ids.season!=null&&p.season!==ids.season)||(ids.episode!=null&&p.episode!==ids.episode));
+    });
+    if(conflictingPosition){
+      sidebar.postMessage("autoLookupResult",{url:forUrl,info:null,reason:"Playback route disagrees with the filename's season/episode"});
+      return;
+    }
+    fast=episodePlusIdentity.identify(hints,readings,alNorm);
+    if(fast&&currentVideoUrl===forUrl){
+      fast.info.auto={from:fast.from};
+      sidebar.postMessage("autoLookupResult",{url:forUrl,info:fast.info,query:fast.query,phase:"provisional"});
+    }
+  }catch(e){log("Episode Info Plus offline identity: "+errStr(e));}
+  if(currentVideoUrl!==forUrl)return;
+  // Exact external ID -> TMDB info; verified only after TMDB succeeds.
+  try {
+    var out=await alLookup(alHints(),alSeconds);
+    reply.info=out.info||null;reply.query=out.query||"";reply.reason=out.reason||"";
+    if(reply.info&&fast){
+      var before=fast.info,after=reply.info;
+      var nameBefore=before.isMovie?before.epTitle:before.showTitle;
+      var nameAfter=after.isMovie?after.epTitle:after.showTitle;
+      if(before.isMovie!==after.isMovie||before.code!==after.code||alNorm(nameBefore)!==alNorm(nameAfter)){
+        sidebar.postMessage("autoLookupConflict",{url:forUrl,reason:"TMDB external ID does not match the parsed title/episode"});
+        return;
+      }
+    }
+    if(reply.info){
+      reply.phase="verified";reply.info.metadataPending=false;reply.info.identitySource="TMDB verified";
+      reply.info.auto={from:out.from||(fast&&fast.from)||"TMDB"};
+    }
+  }catch(e){reply.reason="TMDB unavailable ("+errStr(e)+")";}
   alCacheFlush();
-  if (currentVideoUrl !== forUrl) return;
-  log("Automatic Lookup: " + (reply.info
-    ? "found " + reply.info.showTitle + (reply.info.isMovie ? "" : " " + reply.info.code)
-    : "not sure — " + reply.reason));
-  sidebar.postMessage("autoLookupResult", reply);
+  if(currentVideoUrl!==forUrl)return;
+  if(fast&&!reply.info){
+    sidebar.postMessage("autoEnrichmentFailed",{url:forUrl,reason:reply.reason||"No confirmed metadata"});
+    return;
+  }
+  sidebar.postMessage("autoLookupResult",reply);
 }
 
 // Sidebar handlers
