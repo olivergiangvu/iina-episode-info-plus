@@ -46,9 +46,23 @@ for(const [label,html] of [["sidebar",side],["overlay",over]]){
  const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];
  for(const item of scripts)new vm.Script(item[1],{filename:label});
 }
+// Regression guard: light-mode heading specificity and explicit disabled/active contrast.
+const lightCSS=side.slice(side.indexOf("/* Episode Info Plus beta.3"), side.indexOf("@media (prefers-contrast: more)"));
+for(const fragment of [
+ "body .sub-sec[open] > summary.sub-hd",
+ "body summary.sub-hd::before",
+ "body .lang-lbl",
+ "body .thm.on",
+ "body .sub-btn2:disabled",
+ "body #os-login-btn:disabled",
+ "body #os-key-required-note",
+ "body .key-title",
+ "body #ov-dismiss button"
+]) assert(lightCSS.includes(fragment), "Missing semantic light-mode rule: "+fragment);
+assert(!lightCSS.includes("body .thm.on { background:rgba(229,9,20,.22)"),"Faded selected-theme background regression");
 const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,"../Info.json"),"utf8"));
 assert.equal(manifest.identifier,"io.github.olivergiangvu.iinaepisodeinfoplus");
 assert.equal(manifest.ghRepo,"olivergiangvu/iina-episode-info-plus");
-assert.equal(manifest.ghVersion,2);
-assert.equal(manifest.version,"0.1.0-beta.2");
+assert.equal(manifest.ghVersion,3);
+assert.equal(manifest.version,"0.1.0-beta.3");
 console.log("Episode Info Plus: 16+ identity, integration and theme assertions PASS");
