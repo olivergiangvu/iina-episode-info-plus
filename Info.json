@@ -1,13 +1,13 @@
 {
   "name": "Episode Info Plus",
   "identifier": "io.github.olivergiangvu.iinaepisodeinfoplus",
-  "version": "0.1.0-beta.1",
+  "version": "0.1.0-beta.2",
   "author": {
     "name": "Oliver Giang Vu (upstream Zain Imam)",
     "url": "https://github.com/olivergiangvu"
   },
   "entry": "main.js",
-  "description": "Episode metadata with offline-first stream identification, TMDB enrichment and adaptive Light/Dark appearance.",
+  "description": "IINA episode metadata with smart Comet/DMM/Stremio matching and adaptive Light/Dark overlays.",
   "permissions": [
     "show-osd",
     "video-overlay",
@@ -32,5 +32,7 @@
   ],
   "sidebarTab": {
     "name": "Episode Info+"
-  }
+  },
+  "ghRepo": "olivergiangvu/iina-episode-info-plus",
+  "ghVersion": 2
 }

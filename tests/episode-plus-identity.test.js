@@ -48,5 +48,7 @@ for(const [label,html] of [["sidebar",side],["overlay",over]]){
 }
 const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,"../Info.json"),"utf8"));
 assert.equal(manifest.identifier,"io.github.olivergiangvu.iinaepisodeinfoplus");
-assert(!manifest.ghRepo);
+assert.equal(manifest.ghRepo,"olivergiangvu/iina-episode-info-plus");
+assert.equal(manifest.ghVersion,2);
+assert.equal(manifest.version,"0.1.0-beta.2");
 console.log("Episode Info Plus: 16+ identity, integration and theme assertions PASS");
