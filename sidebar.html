@@ -246,6 +246,9 @@
     /* Nested labels, sign-in form and instructional text */
     body .lang-lbl { color:#34455b; font-size:10.5px; }
     body .key-title { color:#8b4e08; }
+    /* Upstream TMDB warning uses inline bright-orange text; replace it only in Light Mode. */
+    body #api-section > div > div:first-child { color:#8b4e08 !important; }
+    body #api-ok span { color:#197442 !important; }
     body .key-desc { color:#506176; }
     body .key-box {
       color:#39495c; background:rgba(241,145,29,.075);
