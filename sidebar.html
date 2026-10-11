@@ -185,47 +185,158 @@
   .sub-none-btn { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); color: rgba(255,255,255,.55); font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 4px; cursor: pointer; }
   .sub-none-btn.on { background: #555; border-color: #666; color: #fff; }
 
-  /* Episode Info Plus: match macOS appearance, including floating/PiP web views.
-     Inline legacy white labels need targeted light-mode overrides. */
+  /* Episode Info Plus beta.3 — contrast tokens for native IINA Light/Dark.
+     Specific rules replace the first beta's generic white-text overrides.
+     All original dark appearances and settings keys remain untouched. */
   :root { color-scheme: light dark; }
   @media (prefers-color-scheme: dark) {
     body { color:#e9edf3; background:rgba(12,15,21,.26); }
   }
   @media (prefers-color-scheme: light) {
-    body { color:#172435; background:rgba(248,249,252,.93); }
-    body, body input, body button, body textarea, body select { color:#172435; }
-    body #saved { background:rgba(204,39,43,.06); border-color:rgba(160,38,44,.25); }
-    body .rn, body .rc-t, body #s-title { color:#172435; }
-    body .rs, body .rc-s, body #s-meta, body #s-show, body .sl,
-    body .sub-hd, body .sub-meta, body .key-desc, body .msg,
-    body #s-desc, body #opacity-val, body #vpos-val, body .key-msg { color:#566478; }
-    body .pill, body .thm, body .pb, body .sq, body .rc-b, body .sub-btn2,
-    body .sub-load, body .sub-none-btn {
-      color:#27364a; background:rgba(34,49,70,.065); border-color:rgba(34,49,70,.19);
+    body {
+      --ep-text:#19283a; --ep-title:#142134; --ep-muted:#46576b;
+      --ep-subtle:#53647a; --ep-border:rgba(35,52,75,.19);
+      --ep-surface:rgba(34,49,70,.06); --ep-red:#ac302a;
+      color:var(--ep-text); background:rgba(248,249,252,.96);
     }
-    body input:not([type="checkbox"]):not([type="range"]), body textarea, body select,
-    body #q, body .lang-inp, body .key-row input {
-      color:#172435 !important; background:rgba(255,255,255,.80) !important;
-      border-color:rgba(34,49,70,.22) !important;
+    body, body input, body select, body textarea, body button { color:var(--ep-text); }
+    /* Common card, dividers and metadata */
+    body #saved { background:rgba(204,39,43,.055); border-color:rgba(156,44,49,.24); }
+    body #s-title, body .rn, body .rc-t { color:var(--ep-title) !important; }
+    body #s-show, body #s-meta, body #s-desc,
+    body .rs, body .rc-s, body .sub-name, body .sub-meta,
+    body .sl, body .msg, body .key-desc, body .key-msg,
+    body #opacity-val, body #vpos-val {
+      color:var(--ep-muted);
     }
-    body input::placeholder, body #q::placeholder { color:#7c8797; }
-    body .rrow, body .rc-row, body .sub-row { border-color:rgba(34,49,70,.13); }
-    body .sp { border-color:rgba(34,49,70,.15); border-top-color:rgba(34,49,70,.68); }
-    body [style*="color:rgba(255,255,255"], body [style*="color:#fff"] {
-      color:#526175 !important;
+    body #s-desc { color:#3c4b5f; }
+    body hr.div, body .rrow, body .sub-row, body .sub-none-row {
+      border-color:var(--ep-border);
     }
+    body .rc:hover { background:rgba(34,49,70,.07); }
+    body .rc-b { color:#647184; }
+    body .rc-b:hover { color:#213247; }
+    body .rc-b.pinned { color:#866000; }
+    body #clear-btn, body #ov-dismiss button {
+      color:#99333a; background:rgba(190,50,60,.075);
+      border-color:rgba(176,46,57,.22);
+    }
+    body #clear-btn:hover, body #ov-dismiss button:hover {
+      color:#84212c; background:rgba(190,50,60,.13);
+    }
+    /* Important: the opened summary has a more specific upstream selector.
+       Explicitly override closed/hover/opened states AND triangle pseudo-elements. */
+    body .sl, body .sub-hd, body summary.sub-hd,
+    body summary.sub-hd:hover,
+    body .sub-sec[open] > summary.sub-hd {
+      color:#2e4056; font-size:11px; letter-spacing:.075em;
+    }
+    body summary.sub-hd::before,
+    body summary.sub-hd:hover::before,
+    body .sub-sec[open] > summary.sub-hd::before {
+      color:#52657c;
+    }
+    body .sub-sec[open] > summary.sub-hd {
+      color:#162c44; font-weight:750;
+    }
+    body summary.sub-hd:hover { color:#a42c26; }
+    body summary.sub-hd:focus-visible {
+      outline:2px solid #3976b8; outline-offset:2px; border-radius:3px;
+    }
+    /* Nested labels, sign-in form and instructional text */
+    body .lang-lbl { color:#34455b; font-size:10.5px; }
+    body .key-title { color:#8b4e08; }
+    /* Upstream TMDB warning uses inline bright-orange text; replace it only in Light Mode. */
+    body #api-section > div > div:first-child { color:#8b4e08 !important; }
+    body #api-ok span { color:#197442 !important; }
+    body .key-desc { color:#506176; }
+    body .key-box {
+      color:#39495c; background:rgba(241,145,29,.075);
+      border-color:rgba(180,108,22,.28);
+    }
+    body #os-login-form, body .op-wrap {
+      background:rgba(34,49,70,.045) !important;
+      border-color:var(--ep-border) !important;
+    }
+    body #os-key-required-note { color:#8c5f12 !important; }
+    body #os-key-ok span, body #os-logged span { color:#197442 !important; }
+    body #auto-status, body #skip-status,
+    body #os-login-msg, body #os-key-msg, body #sd-key-msg, body #wz-key-msg {
+      color:#43576e !important;
+    }
+    /* Existing light-mode white inline labels are semantic SECONDARY copy,
+       but explicit components below can override this safely. */
+    body [style*="color:rgba(255,255,255"],
+    body [style*="color:#fff"] {
+      color:#48596f !important;
+    }
+    body #s-auto button, body #os-dotorg-link { color:#245986 !important; }
     body [style*="background:rgba(255,255,255"] {
-      background-color:rgba(34,49,70,.065) !important;
+      background-color:var(--ep-surface) !important;
     }
     body [style*="border:1px solid rgba(255,255,255"] {
-      border-color:rgba(34,49,70,.19) !important;
+      border-color:var(--ep-border) !important;
     }
-    body #s-title, body .rn, body .rc-t { color:#152132 !important; }
+    /* Inputs and high-legibility controls */
+    body input:not([type="checkbox"]):not([type="range"]),
+    body select, body textarea, body #q, body .lang-inp,
+    body .key-row input {
+      color:var(--ep-title) !important;
+      background:rgba(255,255,255,.90) !important;
+      border-color:rgba(34,49,70,.23) !important;
+    }
+    body input::placeholder, body #q::placeholder { color:#748296; }
+    body input:focus-visible, body select:focus-visible,
+    body textarea:focus-visible, body button:focus-visible {
+      outline:2px solid #3976b8; outline-offset:1px;
+    }
+    body .pill, body .thm, body .pb, body .sq, body .rc-b,
+    body .sub-btn2, body .sub-load, body .sub-none-btn,
+    body #skip-refresh, body #os-manual-btn,
+    body #sd-manual-btn, body #wz-broad-btn {
+      color:#263a50 !important;
+      background:rgba(34,49,70,.07);
+      border-color:rgba(34,49,70,.23);
+    }
+    body .pill:hover:not(:disabled), body .thm:hover:not(:disabled),
+    body .sq:hover:not(:disabled), body .sub-btn2:hover:not(:disabled),
+    body .sub-load:hover:not(:disabled) {
+      background:rgba(34,49,70,.13);
+      color:#142b41 !important;
+    }
+    body .sub-none-row { color:#44566c; }
+    body #opacity-slider, body #vpos-slider {
+      background:rgba(39,59,84,.28);
+    }
+    /* Disabled != illegible. Clear, neutral disabled appearance. */
+    body .sub-btn2:disabled, body #os-login-btn:disabled,
+    body #go:disabled, body #os-manual-btn:disabled {
+      opacity:1 !important; cursor:not-allowed;
+      background:#e8ecf1 !important;
+      color:#637184 !important;
+      border:1px solid #c8d0dc !important;
+    }
+    /* Selected theme must not be white text on faded red (original bug).
+       Use a solid accent with meaningful text contrast. */
+    body .thm.on, body .thm.on:hover,
+    body .pill.on, body .pill.on:hover {
+      background:#ac302a !important;
+      border-color:#98231f !important; color:#fff !important;
+    }
+    body #go:not(:disabled), body #os-login-btn:not(:disabled),
     body button[style*="background:#c0392b"],
-    body .pill.on, body .thm.on, body .sub-load.loaded,
-    body #go, body .pb:hover, body .sub-load:hover:not(:disabled) { color:#fff !important; }
-    body #s-auto button { color:#165ca9 !important; }
-    body #auto-status { color:#42566c !important; }
+    body .pb:hover, body .sub-load.loaded,
+    body .sub-load:hover:not(:disabled) {
+      color:#fff !important;
+    }
+    body .pb:hover, body .sub-load.loaded,
+    body .sub-load:hover:not(:disabled) { background:#187549; border-color:#187549; }
+    body #go:not(:disabled), body #os-login-btn:not(:disabled),
+    body button[style*="background:#c0392b"] { background:#ac302a !important; }
+    body .sub-none-btn.on { background:#536277; color:#fff !important; border-color:#44536b; }
+    body .sp { border-color:rgba(34,49,70,.18); border-top-color:#465f7a; }
+    body .ok { color:#176d3c; }
+    body .key-ok { color:#176d3c; }
   }
   @media (prefers-contrast: more) {
     body { background:Canvas !important; color:CanvasText !important; }
