@@ -57,6 +57,7 @@ for(const fragment of [
  "body #os-login-btn:disabled",
  "body #os-key-required-note",
  "body .key-title",
+ "body #api-section > div > div:first-child",
  "body #ov-dismiss button"
 ]) assert(lightCSS.includes(fragment), "Missing semantic light-mode rule: "+fragment);
 assert(!lightCSS.includes("body .thm.on { background:rgba(229,9,20,.22)"),"Faded selected-theme background regression");
