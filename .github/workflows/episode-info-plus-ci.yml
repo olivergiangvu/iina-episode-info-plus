@@ -1,0 +1,40 @@
+name: Episode Info Plus CI
+on:
+  push:
+    branches: [main, episode-info-plus-import]
+    paths:
+      - Info.json
+      - main.js
+      - sidebar.html
+      - overlay.html
+      - episode-plus-identity.js
+      - tests/**
+      - .github/workflows/episode-info-plus-ci.yml
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        run: |
+          node --check main.js
+          node --check episode-plus-identity.js
+      - name: Run matching and interface regression tests
+        run: node tests/episode-plus-identity.test.js
+      - name: Check package and auto-update manifest
+        run: |
+          node -e 'const a=require("./Info.json");if(!Number.isInteger(a.ghVersion)||a.ghRepo!=="olivergiangvu/iina-episode-info-plus")process.exit(1)'
+          mkdir -p dist
+          V="$(node -p 'require("./Info.json").version')"
+          zip -q -r "dist/Episode-Info-Plus-$V.iinaplgz" Info.json main.js episode-plus-identity.js sidebar.html overlay.html LICENSE
+          unzip -t "dist/Episode-Info-Plus-$V.iinaplgz"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: episode-info-plus-ci-package
+          path: dist/*.iinaplgz
+          retention-days: 30

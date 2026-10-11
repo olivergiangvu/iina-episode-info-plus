@@ -1,0 +1,61 @@
+name: Publish Episode Info Plus beta
+on:
+  push:
+    branches: [main]
+    paths:
+      - Info.json
+      - main.js
+      - episode-plus-identity.js
+      - sidebar.html
+      - overlay.html
+      - .github/workflows/release.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: episode-info-plus-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate source and manifest
+        run: |
+          node --check main.js
+          node --check episode-plus-identity.js
+          node tests/episode-plus-identity.test.js
+          node <<'NODE'
+          const i = require('./Info.json');
+          if (i.ghRepo !== 'olivergiangvu/iina-episode-info-plus' ||
+              !Number.isInteger(i.ghVersion) || i.ghVersion < 1 ||
+              !/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(i.version))
+            throw new Error('Invalid auto-update manifest');
+          NODE
+      - name: Build installable IINA package
+        run: |
+          mkdir -p dist
+          V="$(node -p 'require("./Info.json").version')"
+          zip -q -r "dist/Episode-Info-Plus-$V.iinaplgz" Info.json main.js episode-plus-identity.js sidebar.html overlay.html LICENSE
+          unzip -t "dist/Episode-Info-Plus-$V.iinaplgz"
+          echo "VERSION=$V" >> "$GITHUB_ENV"
+      - name: Create immutable versioned beta release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v$VERSION"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists. No destructive overwrite."
+            exit 0
+          fi
+          cat > /tmp/notes.md <<'NOTES'
+          Independent IINA Episode Info Plus beta forked from Zain Imam's Episode Info.
+
+          Improvements: playback-aware Comet/Stremio/DMM matching, safe MediaFusion route hints, provisional identity when TMDB times out, conflict protection, Light/Dark appearance and original subtitle/skip features.
+
+          The plugin identifier is unchanged from the previous Episode Info Plus beta, but this fork enables a new GitHub update channel. If you installed beta.1 from a local file, reinstall beta.2 once to enable updates.
+          NOTES
+          gh release create "$TAG" "dist/Episode-Info-Plus-$VERSION.iinaplgz" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Episode Info Plus $VERSION" --notes-file /tmp/notes.md \
+            --prerelease --latest=false
