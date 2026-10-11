@@ -1,4 +1,4 @@
-name: Publish Episode Info Plus beta
+name: Publish Episode Info Plus releases
 on:
   push:
     branches: [main]
@@ -39,23 +39,41 @@ jobs:
           zip -q -r "dist/Episode-Info-Plus-$V.iinaplgz" Info.json main.js episode-plus-identity.js sidebar.html overlay.html LICENSE
           unzip -t "dist/Episode-Info-Plus-$V.iinaplgz"
           echo "VERSION=$V" >> "$GITHUB_ENV"
-      - name: Create immutable versioned beta release
+      - name: Publish versioned release (stable or prerelease)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="v$VERSION"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release $TAG already exists. No destructive overwrite."
+            echo "Release $TAG already exists. Keeping its immutable asset."
             exit 0
           fi
-          cat > /tmp/notes.md <<'NOTES'
-          Independent IINA Episode Info Plus beta forked from Zain Imam's Episode Info.
+          if [[ "$VERSION" == *-* ]]; then
+            cat > /tmp/notes.md <<'NOTES'
+          Episode Info Plus prerelease — independent fork of Zain Imam's IINA Episode Info.
 
-          Improvements: playback-aware Comet/Stremio/DMM matching, safe MediaFusion route hints, provisional identity when TMDB times out, conflict protection, Light/Dark appearance and original subtitle/skip features.
-
-          The plugin identifier is unchanged from the previous Episode Info Plus beta, but this fork enables a new GitHub update channel. If you installed beta.1 from a local file, reinstall beta.2 once to enable updates.
+          Playback-aware metadata matching with IMDb/filename/conflict checks, adaptive Light/Dark UI, and the original subtitle and skip-intro functionality. Review beta changes before production use.
           NOTES
-          gh release create "$TAG" "dist/Episode-Info-Plus-$VERSION.iinaplgz" \
-            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "Episode Info Plus $VERSION" --notes-file /tmp/notes.md \
-            --prerelease --latest=false
+            gh release create "$TAG" "dist/Episode-Info-Plus-$VERSION.iinaplgz" \
+              --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title "Episode Info Plus $VERSION" --notes-file /tmp/notes.md \
+              --prerelease --latest=false
+          else
+            cat > /tmp/notes.md <<'NOTES'
+          Episode Info Plus v0.1.0 — Stable release, promoted from v0.1.0-beta.3 after user testing in IINA/macOS.
+
+          - Smart automatic episode/movie matching from playback URLs, explicit IMDb/TMDB identifiers, release filenames and verified S/E context.
+          - Two-stage TMDB enrichment with non-destructive timeout fallback and conflict safeguards.
+          - High-contrast native macOS Light/Dark appearance for sidebar, overlays and Picture-in-Picture.
+          - Original Episode Info subtitles, manual lookup, recent picks and skip-intro/credits preserved.
+          - Existing Episode Info Plus plugin identifier and local settings keys preserved.
+
+          No additional permissions or new services are needed. If using beta.2 or beta.3, update this plugin in IINA; if using the manually installed beta.1 without ghRepo, install the stable .iinaplgz once.
+
+          This project is a fork of Zain Imam's Episode Info under the MIT License.
+          NOTES
+            gh release create "$TAG" "dist/Episode-Info-Plus-$VERSION.iinaplgz" \
+              --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title "Episode Info Plus v$VERSION — Stable" --notes-file /tmp/notes.md \
+              --latest
+          fi
