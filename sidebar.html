@@ -1150,7 +1150,10 @@ iina.onMessage("autoEnrichmentFailed", function(d) {
   if (!d || d.url !== currentVideoUrl || !autoLookupOn() || !autoShown) return;
   var hit = loadAutoMap()[d.url];
   if (!hit || !hit.info || !hit.info.metadataPending) return;
+  hit.info.overview = "Episode recognized, but full metadata is unavailable. Retry later or search manually.";
   rememberAuto(d.url, { info: hit.info, retryAt: Date.now() + 300000, engineRev: AUTO_ENGINE_REV });
+  // Update the sidebar AND the pause overlay: no endless loading placeholder.
+  showAutoMatch(hit.info);
   var wasNetworkFailure=d.failureKind==="request-failed";
   autoStatus(wasNetworkFailure ? "Episode recognized · metadata services unreachable" :
     "Episode recognized · no verified metadata found", d.reason || "Metadata will be retried");

@@ -51,6 +51,7 @@ assert.equal(fallout.info.code,"S02E07");
 assert.equal(fallout.info.showTitle,"Fallout");
 assert.equal(fallout.info.epTitle,"Episode 7");
 assert.equal(fallout.info.metadataPending,true);
+assert(!/TMDB unavailable/i.test(fallout.info.overview),"Provisional state should not claim TMDB failure before any request");
 assert(!fallout.info.parentImdbId,"MediaFusion route alone has no IMDb");
 const bad=inspectUrls({url:"https://foo.invalid/stream?media_id=tt6517102&media_type=movie&media_type=series"});
 assert(bad.conflict);

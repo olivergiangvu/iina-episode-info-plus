@@ -62,7 +62,7 @@ function identify(h,readings,normalize){
  var info={isMovie:movie,isStream:true,showTitle:movie?"Movie":p.title,
    epTitle:movie?p.title:(epName||"Episode "+p.episode),
    code:movie?String(p.year||""):"S"+String(p.season).padStart(2,"0")+"E"+String(p.episode).padStart(2,"0"),
-   airDate:"",rating:"",overview:"Metadata pending (TMDB unavailable)",posterUrl:"",
+   airDate:"",rating:"",overview:"Fetching verified episode details…",posterUrl:"",
    tmdbId:id.tmdb?String(id.tmdb):"",season:movie?null:p.season,episode:movie?null:p.episode,
    identitySource:id.imdb?"IMDb + filename":(id.tmdb?"TMDB ID + filename":"MediaFusion route + filename"),metadataPending:true};
  if(id.imdb){if(movie)info.imdbId=id.imdb;else info.parentImdbId=id.imdb;}
