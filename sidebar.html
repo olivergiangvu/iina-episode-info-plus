@@ -371,6 +371,11 @@
     </label>
   </div>
   <div id="auto-status" style="display:none;font-size:11px;color:rgba(255,255,255,.5);line-height:1.45;margin-top:6px"></div>
+  <details id="epplus-metadata-diagnostics" style="margin-top:6px">
+    <summary style="font-size:10px;opacity:.8;cursor:pointer">Metadata API diagnostics</summary>
+    <button id="epplus-metadata-test" onclick="epplusTestMetadata()" style="background:rgba(130,140,150,.12);border:1px solid rgba(130,140,150,.35);border-radius:5px;padding:5px 7px;color:inherit;font-size:11px;margin-top:6px;cursor:pointer">Test metadata APIs</button>
+    <div id="epplus-metadata-test-results" role="status" aria-live="polite" style="font-size:10px;line-height:1.5;margin-top:5px;white-space:pre-line;overflow-wrap:anywhere"></div>
+  </details>
 </div>
 
 <div id="ov-dismiss">
@@ -1058,6 +1063,20 @@ function rememberAuto(url, entry) {
   m[url] = entry;
   saveAutoMap(m);
 }
+
+function epplusTestMetadata(){
+  var b=document.getElementById("epplus-metadata-test");
+  var area=document.getElementById("epplus-metadata-test-results");
+  if(b)b.disabled=true;
+  if(area)area.textContent="Testing API endpoints…";
+  iina.postMessage("metadataHealthCheck",{});
+}
+iina.onMessage("metadataHealthResult",function(data){
+  var b=document.getElementById("epplus-metadata-test");
+  var area=document.getElementById("epplus-metadata-test-results");
+  if(b)b.disabled=false;
+  if(area)area.textContent=(data&&data.checks||[]).map(function(c){return c.name+": "+c.status;}).join("\n")||"No results";
+});
 
 // Status line under the switch; detail is the reason
 function autoStatus(text, detail) {
