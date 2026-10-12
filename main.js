@@ -1,7 +1,8 @@
-// IINA Plugin: Episode Info Plus v0.1.1-beta.1
+// IINA Plugin: Episode Info Plus v0.1.1-beta.2
 
 const { core, event, utils, file, menu } = iina;
 const episodePlusIdentity = require("./episode-plus-identity.js");
+const episodePlusTvmaze = require("./episode-plus-tvmaze.js");
 // Messages to the overlay and sidebar go through messageSafe()
 const overlay = safeMessenger(iina.overlay, ["loadFile", "onMessage", "show", "hide", "setClickable"]);
 const sidebar = safeMessenger(iina.sidebar, ["loadFile", "onMessage"]);
@@ -1298,6 +1299,26 @@ function alSeconds() {
   try { return iina.mpv.getNumber("duration") || 0; } catch (e) { return 0; }
 }
 
+// Fallback uses only show title and S/E (never a tokenized playback URL).
+// TVmaze is an independent verified source when TMDB fails or has no usable data.
+async function alTvmazeFallback(fast,hints,seconds){
+ if(!fast||!fast.info||fast.info.isMovie||fast.info.season==null||fast.info.episode==null)return null;
+ var info=fast.info;
+ var year=episodePlusTvmaze.yearFromPlayerLabel(hints.metadataTitle,info.showTitle) ||
+          episodePlusTvmaze.yearFromPlayerLabel(hints.mediaTitle,info.showTitle);
+ return episodePlusTvmaze.lookup({
+   title:info.showTitle,season:info.season,episode:info.episode,
+   year:year||null,seconds:seconds
+ },async function(path,params){
+   var response=await withTimeout(
+     iina.http.get("https://api.tvmaze.com"+path,{params:params}),9000,"TVmaze"
+   );
+   if(response.statusCode===404)return null;
+   if(response.statusCode!==200)throw new Error("TVmaze HTTP "+response.statusCode);
+   return response.data || JSON.parse(response.text||"null");
+ });
+}
+
 // Only answer if that file is still playing
 async function autoLookup(d) {
   var forUrl=currentVideoUrl;
@@ -1327,7 +1348,8 @@ async function autoLookup(d) {
     }
   }catch(e){log("Episode Info Plus offline identity: "+errStr(e));}
   if(currentVideoUrl!==forUrl)return;
-  // Exact external ID -> TMDB info; verified only after TMDB succeeds.
+  // TMDB first; a failed request is NOT proof this episode does not exist.
+  var tmdbFailureKind="not-matched";
   try {
     var out=await alLookup(alHints(),alSeconds);
     reply.info=out.info||null;reply.query=out.query||"";reply.reason=out.reason||"";
@@ -1344,11 +1366,36 @@ async function autoLookup(d) {
       reply.phase="verified";reply.info.metadataPending=false;reply.info.identitySource="TMDB verified";
       reply.info.auto={from:out.from||(fast&&fast.from)||"TMDB"};
     }
-  }catch(e){reply.reason="TMDB unavailable ("+errStr(e)+")";}
+  }catch(e){
+    tmdbFailureKind="request-failed";
+    reply.reason="TMDB request failed ("+errStr(e)+")";
+  }
+  // Do not reclassify a "not found" network exception as nonexistent media.
+  // Use a distinct source if TMDB cannot confirm the episode.
+  if(!reply.info&&fast&&currentVideoUrl===forUrl){
+    try {
+      var alt=await alTvmazeFallback(fast,alHints(),alSeconds());
+      if(alt){
+        var a=fast.info;
+        if(a.code===alt.code&&alNorm(a.showTitle)===alNorm(alt.showTitle)){
+          reply.info=alt;reply.phase="verified";reply.reason="";
+          reply.info.auto={from:"TVmaze"};
+        }else{
+          reply.reason="TVmaze title/episode differs from filename; manual lookup required";
+          tmdbFailureKind="identity-conflict";
+        }
+      }else if(!reply.reason)reply.reason="TMDB and TVmaze have no matching episode";
+    }catch(e){
+      var tvErr=errStr(e);
+      reply.reason=(reply.reason||"TMDB could not confirm this episode")+
+        "; TVmaze request failed ("+tvErr+")";
+      tmdbFailureKind="request-failed";
+    }
+  }
   alCacheFlush();
   if(currentVideoUrl!==forUrl)return;
   if(fast&&!reply.info){
-    sidebar.postMessage("autoEnrichmentFailed",{url:forUrl,reason:reply.reason||"No confirmed metadata"});
+    sidebar.postMessage("autoEnrichmentFailed",{url:forUrl,reason:reply.reason||"No confirmed metadata",failureKind:tmdbFailureKind});
     return;
   }
   sidebar.postMessage("autoLookupResult",reply);

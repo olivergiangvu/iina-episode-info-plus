@@ -1111,9 +1111,10 @@ function showAutoMatch(info) {
     stage.style.marginLeft = "4px";
     marker.appendChild(stage);
   }
-  stage.textContent = info.metadataPending ? "· Provisional identity (not TMDB-verified)" : "· TMDB verified";
+  var verifiedSource = info.metadataSource==="TVmaze" ? "TVmaze" : "TMDB";
+  stage.textContent = info.metadataPending ? "· Provisional identity (not verified)" : "· "+verifiedSource+" verified";
   stage.style.color = info.metadataPending ? "#a76b20" : "#1b9555";
-  autoStatus(info.metadataPending ? "Recognized via playback ID · TMDB details pending" : "Matched and verified via TMDB");
+  autoStatus(info.metadataPending ? "Episode recognized from playback filename · fetching metadata" : "Matched and verified via "+verifiedSource);
 }
 
 iina.onMessage("autoLookupResult", function(d) {
@@ -1145,7 +1146,9 @@ iina.onMessage("autoEnrichmentFailed", function(d) {
   var hit = loadAutoMap()[d.url];
   if (!hit || !hit.info || !hit.info.metadataPending) return;
   rememberAuto(d.url, { info: hit.info, retryAt: Date.now() + 300000 });
-  autoStatus("Episode identified · TMDB temporarily unavailable", d.reason || "Metadata will be retried");
+  var wasNetworkFailure=d.failureKind==="request-failed";
+  autoStatus(wasNetworkFailure ? "Episode recognized · metadata services unreachable" :
+    "Episode recognized · no verified metadata found", d.reason || "Metadata will be retried");
 });
 
 // "Not right? Search": forget the match and never guess this file again
