@@ -212,10 +212,19 @@ async function checkOpenSubtitles() {
 
   if (!key) {
     const r = await get(url);
-    // 401/403 both prove the route exists and is enforcing auth as documented.
-    need([401, 403].includes(r.status), `expected 401/403 without a key, got HTTP ${r.status}`);
-    need(r.json !== null, "error response was not JSON — service may have changed");
-    return { skip: `no OPENSUBTITLES_API_KEY — endpoint alive (HTTP ${r.status}, JSON error)` };
+    // OpenSubtitles can legitimately return HTTP 200 to an unauthenticated
+    // read-only search. A 200 is not an outage and not proof of authentication.
+    if ([401, 403].includes(r.status)) {
+      need(r.json !== null, "error response was not JSON — service may have changed");
+      return { skip: `no OPENSUBTITLES_API_KEY — endpoint alive (HTTP ${r.status}, JSON error)` };
+    }
+    if (r.status === 200) {
+      need(r.json !== null, "OpenSubtitles returned HTTP 200 without JSON — possible proxy or challenge");
+      if (Array.isArray(r.json?.data))
+        return { skip: "no OPENSUBTITLES_API_KEY — endpoint alive (HTTP 200, subtitle data shape valid); authenticated usage unverified" };
+      return { warn: "no OPENSUBTITLES_API_KEY — HTTP 200 JSON without subtitles.data; full response-contract check requires a key" };
+    }
+    need(false, `unexpected HTTP ${r.status} without OpenSubtitles key`);
   }
 
   const r = await get(url, { headers: { "Api-Key": key } });
