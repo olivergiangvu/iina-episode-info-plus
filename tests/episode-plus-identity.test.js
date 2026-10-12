@@ -81,6 +81,52 @@ for(const fragment of [
  "body #ov-dismiss button"
 ]) assert(lightCSS.includes(fragment), "Missing semantic light-mode rule: "+fragment);
 assert(!lightCSS.includes("body .thm.on { background:rgba(229,9,20,.22)"),"Faded selected-theme background regression");
+// Integration fixture: run the REAL main.js filename parsing/readings and lookup routing.
+// TMDB transport is intentionally mocked; a real TMDB response requires live IINA testing.
+const sourceStart=main.indexOf("var AL_VIDEO_EXT = ");
+const sourceEnd=main.indexOf("// TMDB, cached",sourceStart);
+assert(sourceStart>=0 && sourceEnd>sourceStart, "Cannot locate real main.js parser functions");
+const context=vm.createContext({});
+vm.runInContext(main.slice(sourceStart,sourceEnd),context,{filename:"main-episode-parser.js"});
+assert.equal(typeof context.alReadings,"function");
+const playerHints={
+ path:falloutURL,url:falloutURL,filename:falloutName,
+ mediaTitle:"Fallout (2024)",metadataTitle:"Fallout (2024)"
+};
+(async function() {
+ const link=context.alSplitLink(playerHints.path);
+ const readings=await context.alReadings(playerHints,link);
+ assert(readings.length>=2,"Expected filename and display-title readings");
+ assert.equal(readings[0].source,"mpv-filename","Real mpv release filename must take priority");
+ assert.equal(readings[0].p.title,"Fallout");
+ assert.equal(readings[0].p.season,2);
+ assert.equal(readings[0].p.episode,7);
+ const complete=identify(playerHints,readings,context.alNorm);
+ assert(complete && complete.info, "Full Fallout parser + identity integration must work");
+ assert.equal(complete.info.showTitle,"Fallout");
+ assert.equal(complete.info.code,"S02E07");
+ assert.equal(complete.info.epTitle,"Episode 7","Release audio tags are not episode titles");
+ assert.equal(complete.info.metadataPending,true);
+ const lookupStart=main.indexOf("async function alLookup(h, seconds) {");
+ const lookupEnd=main.indexOf("\nfunction alHints()",lookupStart);
+ assert(lookupStart>0&&lookupEnd>lookupStart);
+ context.alMatchTv=async function(parsed,seconds) {
+   assert.equal(parsed.title,"Fallout");
+   assert.equal(parsed.season,2);
+   assert.equal(parsed.episode,7);
+   assert.equal(seconds,3000);
+   return {info:{showTitle:"Fallout",code:"S02E07",epTitle:"The Handoff",isMovie:false}};
+ };
+ context.alMatchMovie=async function(){throw Error("Fallout must not be classified as a movie");};
+ context.alServerName=async function(){throw Error("Playback URL headers should not override filename");};
+ context.alFromImdb=async function(){throw Error("MediaFusion URL has no IMDb ID");};
+ vm.runInContext(main.slice(lookupStart,lookupEnd),context,{filename:"main-lookup.js"});
+ const result=await context.alLookup(playerHints,()=>3000);
+ assert(result.info&&result.info.code==="S02E07");
+ assert.equal(result.info.epTitle,"The Handoff");
+ console.log("Fallout integration: real filename parser, trusted route, correct TV lookup PASS");
+})().catch(function(err){console.error(err);process.exitCode=1;});
+
 const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,"../Info.json"),"utf8"));
 assert.equal(manifest.identifier,"io.github.olivergiangvu.iinaepisodeinfoplus");
 assert.equal(manifest.ghRepo,"olivergiangvu/iina-episode-info-plus");
