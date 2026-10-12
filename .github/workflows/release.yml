@@ -64,17 +64,21 @@ jobs:
               --prerelease --latest=false
           else
             cat > /tmp/notes.md <<'NOTES'
-          Episode Info Plus v0.1.0 — Stable release, promoted from v0.1.0-beta.3 after user testing in IINA/macOS.
+          Episode Info Plus v0.1.1 — Stable, promoted from v0.1.1-beta.3 after real playback verification on IINA/macOS.
 
-          - Smart automatic episode/movie matching from playback URLs, explicit IMDb/TMDB identifiers, release filenames and verified S/E context.
-          - Two-stage TMDB enrichment with non-destructive timeout fallback and conflict safeguards.
-          - High-contrast native macOS Light/Dark appearance for sidebar, overlays and Picture-in-Picture.
-          - Original Episode Info subtitles, manual lookup, recent picks and skip-intro/credits preserved.
-          - Existing Episode Info Plus plugin identifier and local settings keys preserved.
+          What's new:
+          - Better MediaFusion/TorBox episode recognition from mpv filenames plus trustworthy S/E route agreement, including Fallout S02E07.
+          - IINA HTTP bridge compatibility fix: explicitly encoded TMDB and TVmaze metadata API query strings.
+          - TVmaze metadata fallback for TV episodes when TMDB cannot confirm; requires no extra API key. TVmaze fallback passed automated tests but not yet an independent on-device fallback test.
+          - Optional in-plugin TMDB/TVmaze API diagnostics, which report only endpoint results.
+          - Provisional state remains clearly labeled; metadata from TMDB/TVmaze is only marked verified after a successful exact match.
 
-          No additional permissions or new services are needed. If using beta.2 or beta.3, update this plugin in IINA; if using the manually installed beta.1 without ghRepo, install the stable .iinaplgz once.
+          Compatibility:
+          - Existing IINA plugin identifier, local settings keys, Trakt+ integration boundaries and UI appearance preserved.
+          - Two additional network hosts for TVmaze metadata and artwork: api.tvmaze.com and static.tvmaze.com.
+          - v0.1.0 Stable remains available for rollback.
+          - Maintained as an independent fork of Zain Imam's Episode Info (MIT License).
 
-          This project is a fork of Zain Imam's Episode Info under the MIT License.
           NOTES
             gh release create "$TAG" "dist/Episode-Info-Plus-$VERSION.iinaplgz" \
               --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
