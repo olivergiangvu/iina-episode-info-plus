@@ -59,6 +59,8 @@ assert(main.includes('autoEnrichmentFailed'));assert(main.includes('autoLookupCo
 const side=fs.readFileSync(path.join(__dirname,"../sidebar.html"),"utf8");
 assert(side.includes('iina.onMessage("autoLookupConflict"'));
 assert(side.includes("Provisional identity (not verified)"));
+assert(side.includes("var AUTO_ENGINE_REV = 2;"));
+assert(side.includes("var staleEngine = hit.info.metadataPending"),"Old provisional cache must retry after upgrading matching engine");
 const over=fs.readFileSync(path.join(__dirname,"../overlay.html"),"utf8");
 for(const [label,html] of [["sidebar",side],["overlay",over]]){
  assert(html.includes("@media (prefers-color-scheme: light)"),label+" light mode");
