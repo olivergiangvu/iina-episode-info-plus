@@ -157,6 +157,7 @@ const playerHints={
  context.alMatchMovie=async function(){throw Error("Fallout must not be classified as a movie");};
  context.alServerName=async function(){throw Error("Playback URL headers should not override filename");};
  context.alFromImdb=async function(){throw Error("MediaFusion URL has no IMDb ID");};
+ context.alNotSure=function(reason,query){return {info:null,reason:reason,query:query||""};};
  vm.runInContext(main.slice(lookupStart,lookupEnd),context,{filename:"main-lookup.js"});
  const result=await context.alLookup(playerHints,()=>3000);
  // IINA screenshot #aios_title flows through real parser -> TV TMDB lookup,
