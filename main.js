@@ -918,8 +918,8 @@ async function alReadings(h, link) {
   var mpvFilename = String(h.filename || "").trim();
   if (mpvFilename.length > 0 && mpvFilename.length <= 500 &&
       AL_VIDEO_EXT.test(mpvFilename) &&
-      !/^\\w+:\\/\\//.test(mpvFilename) && !/[?&#]/.test(mpvFilename)) {
-    out.push(alReading(mpvFilename.split(/[\\\\/]/).pop(), [], "mpv-filename"));
+      !/^[a-z][a-z0-9+.-]*:\/\//i.test(mpvFilename) && !/[?&#]/.test(mpvFilename)) {
+    out.push(alReading(mpvFilename.split("/").pop(), [], "mpv-filename"));
   }
   // DMM/mpv can put the real filename inside an opaque player label:
   // 98800072:1?h=<hash>&file=Better.Call.Saul.S03E03.mkv
