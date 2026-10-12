@@ -130,6 +130,61 @@ const playerHints={
 const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,"../Info.json"),"utf8"));
 assert.equal(manifest.identifier,"io.github.olivergiangvu.iinaepisodeinfoplus");
 assert.equal(manifest.ghRepo,"olivergiangvu/iina-episode-info-plus");
-assert.equal(manifest.ghVersion,5);
-assert.equal(manifest.version,"0.1.1-beta.1");
+assert.equal(manifest.ghVersion,6);
+assert.equal(manifest.version,"0.1.1-beta.2");
+// TVmaze verified-metadata tests: no live API key needed.
+const tvmaze=require("../episode-plus-tvmaze.js");
+const mazeShow={id:49041,name:"Fallout",premiered:"2024-04-10",
+  image:{medium:"https://static.tvmaze.com/uploads/images/medium_portrait/1/2.jpg"},
+  externals:{imdb:"tt12637874"}};
+const mazeEpisode={season:2,number:7,name:"The Handoff",airdate:"2026-01-27",
+  runtime:51,rating:{average:8.1},summary:"<p>You always end up <b>back where you started</b>.</p>"};
+function mazeRequest(path,query){
+ if(path==="/search/shows"){assert.equal(query.q,"Fallout");return [{show:mazeShow}];}
+ if(path==="/shows/49041/episodebynumber"){
+  assert.equal(query.season,2);assert.equal(query.number,7);
+  return mazeEpisode;
+ }
+ throw Error("Unexpected mocked TVmaze request "+path);
+}
+(async function(){
+ const hint={title:"Fallout",season:2,episode:7,year:2024,seconds:3038};
+ assert.equal(tvmaze.yearFromPlayerLabel("Fallout (2024)","Fallout"),2024);
+ const actual=await tvmaze.lookup(hint,async function(path,query){return mazeRequest(path,query);});
+ assert(actual && actual.metadataPending===false);
+ assert.equal(actual.identitySource,"TVmaze verified");
+ assert.equal(actual.epTitle,"The Handoff");
+ assert.equal(actual.code,"S02E07");
+ assert.equal(actual.airDate,"2026-01-27");
+ assert.equal(actual.parentImdbId,"tt12637874");
+ assert.equal(actual.tmdbId,"","Never invent a TMDB ID from TVmaze");
+ assert.equal(actual.posterUrl,mazeShow.image.medium);
+ assert(actual.overview.includes("You always end up back where you started."));
+ assert(!actual.overview.includes("<p>"),"No HTML in episode summary");
+ assert.equal(await tvmaze.lookup({...hint,year:2025},mazeRequest),null,"Premiere year must match");
+ assert.equal(await tvmaze.lookup({...hint,episode:8},async function(path,query){
+  if(path==="/search/shows")return [{show:mazeShow}];
+  return mazeEpisode;
+ }),null,"Wrong S/E returned by provider is rejected");
+ assert.equal(await tvmaze.lookup({...hint,seconds:120},mazeRequest),null,"Runtime mismatch must reject");
+ assert.equal(await tvmaze.lookup(hint,async function(path){
+  if(path==="/search/shows")return [{show:mazeShow},{show:{...mazeShow,id:49042}}];
+  throw Error("Should not load ambiguous series");
+ }),null,"Duplicate exactly named series must not be guessed");
+ assert.equal(await tvmaze.lookup(hint,async function(path){
+  if(path==="/search/shows")return [{show:{...mazeShow,name:"Fallout: New Vegas"}}];
+  throw Error("Should not load a fuzzy series");
+ }),null,"Fuzzy matching cannot verify show identity");
+ const malicious=await tvmaze.lookup(hint,async function(path){
+  if(path==="/search/shows")return [{show:{...mazeShow,image:{medium:"https://evil.example/unsafe.jpg"}}}];
+  return mazeEpisode;
+ });
+ assert.equal(malicious.posterUrl,"","Only trusted TVmaze images allowed");
+ assert(main.includes("episodePlusTvmaze.lookup"),"Actual IINA autoLookup uses TVmaze fallback");
+ assert(side.includes("TVmaze verified")||side.includes('info.metadataSource==="TVmaze"'),"UI identifies fallback source");
+ assert(manifest.allowedDomains.includes("api.tvmaze.com"));
+ assert(manifest.allowedDomains.includes("static.tvmaze.com"));
+ console.log("TVmaze fallback: exact Fallout S02E07 episode, poster, synopsis and security checks PASS");
+})().catch(function(e){console.error(e);process.exitCode=1;});
+
 console.log("Episode Info Plus: 16+ identity, integration and theme assertions PASS");
