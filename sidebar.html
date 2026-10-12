@@ -1023,6 +1023,7 @@ function doToggleOverlay(enabled) {
 // Automatic Lookup (experimental)
 // Matches go in epinfo_auto_map, never in the user's own picks or Recent Picks
 var AUTO_MAP_CAP = 300;
+var AUTO_ENGINE_REV = 2; // Retry old provisional results after installing beta.2.
 var autoShown = false;   // the saved card is showing a match, not a pick
 
 function autoLookupOn() {
@@ -1090,8 +1091,12 @@ function startAutoLookup(url) {
   if (hit && hit.info) {
     showAutoMatch(hit.info);
     // A provisional match is useful offline; retry enrichment later.
-    if (!hit.info.metadataPending || !TK || (hit.retryAt && Date.now() < hit.retryAt)) return;
-    rememberAuto(url, { info: hit.info, retryAt: Date.now() + 120000 });
+    // Previous beta stored a 5-minute retry cooldown. A new matching engine
+    // must not leave old placeholder metadata blocking its improved fallback.
+    var staleEngine = hit.info.metadataPending && hit.engineRev !== AUTO_ENGINE_REV;
+    if (!hit.info.metadataPending || (!TK && !staleEngine) ||
+        (!staleEngine && hit.retryAt && Date.now() < hit.retryAt)) return;
+    rememberAuto(url, { info: hit.info, retryAt: Date.now() + 120000, engineRev: AUTO_ENGINE_REV });
     iina.postMessage("autoLookup", { url: url });
     return;
   }
@@ -1122,7 +1127,7 @@ iina.onMessage("autoLookupResult", function(d) {
   // A pick made while the lookup ran wins.
   if (document.getElementById("saved").classList.contains("on") && !autoShown) return;
   if (d.info) {
-    rememberAuto(d.url, { info: d.info, retryAt: d.info.metadataPending ? Date.now() + 120000 : 0 });
+    rememberAuto(d.url, { info: d.info, retryAt: d.info.metadataPending ? Date.now() + 120000 : 0, engineRev: AUTO_ENGINE_REV });
     showAutoMatch(d.info);
   } else {
     autoStatus("Not sure what this is — search below.", d.reason);
@@ -1145,7 +1150,7 @@ iina.onMessage("autoEnrichmentFailed", function(d) {
   if (!d || d.url !== currentVideoUrl || !autoLookupOn() || !autoShown) return;
   var hit = loadAutoMap()[d.url];
   if (!hit || !hit.info || !hit.info.metadataPending) return;
-  rememberAuto(d.url, { info: hit.info, retryAt: Date.now() + 300000 });
+  rememberAuto(d.url, { info: hit.info, retryAt: Date.now() + 300000, engineRev: AUTO_ENGINE_REV });
   var wasNetworkFailure=d.failureKind==="request-failed";
   autoStatus(wasNetworkFailure ? "Episode recognized · metadata services unreachable" :
     "Episode recognized · no verified metadata found", d.reason || "Metadata will be retried");
