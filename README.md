@@ -8,6 +8,8 @@ Maintained as an independent fork of [Zain Imam's Episode Info](https://github.c
 
 ## Episode Info Plus features
 
+**0.1.1-beta.1 bug fix (Fallout S02E07):** Prioritize true mpv release filenames over display titles like `Fallout (2024)`. When a recognized MediaFusion route agrees on S/E, allow a **provisional** show/episode card even without IMDb/TMDB IDs; then use TMDB to verify and enrich. Route-only or episode-title-only matches remain rejected. No new host permissions, settings changes or Trakt integration.
+
 **Stable release v0.1.0** — promoted from beta.3 after IINA/macOS real-world validation of automatic episode lookup and Light/Dark UI. Playback-matching behavior, local settings/storage keys, subtitle sources and overlay functionality are unchanged.
 
 **Stable v0.1.0 includes the beta.3 accessibility fix:** targeted macOS Light Mode contrast correction for nested section headings, language labels, light-theme selected tabs, disabled subtitle/search controls, warnings and theme sliders. Dark Mode and stored preferences are not changed.
@@ -26,9 +28,9 @@ Open **IINA → Settings/Preferences → Plugins → Install from GitHub** and e
 https://github.com/olivergiangvu/iina-episode-info-plus
 ```
 
-Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **0.1.0**. The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
+Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **0.1.0**. MediaFusion filename matching fix is available for testing in **0.1.1-beta.1** (prerelease). The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
 
-GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (currently 4). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
+GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (beta branch currently 5). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
 
 ## Preserving settings
 

@@ -31,7 +31,27 @@ const mf=inspectUrls({path:mfUrl});
 assert.equal(mf.season,2);assert.equal(mf.episode,8);assert.equal(mf.type,"episode");
 assert(!mf.imdb,"MediaFusion route does not identify the show");
 assert.equal(inspectUrls({path:mfUrl.replace("mediafusion.elfhosted.com","untrusted.example")}).season,null);
-assert(!identify({path:mfUrl},[ep("The Legend of Vox Machina",2,8)],norm),"Without IMDb/TMDB a season route is insufficient to prove the show");
+// The position by itself cannot establish a show, even on the genuine MediaFusion host.
+assert(!identify({path:mfUrl},[ep("The Legend of Vox Machina",2,8)],norm),"A URL route plus an unsourced name must not establish a show");
+const sourceTagged=ep("The Legend of Vox Machina",2,8,"mpv-filename");
+const mfCandidate=identify({path:mfUrl},[sourceTagged],norm);
+assert(mfCandidate&&mfCandidate.info&&mfCandidate.info.metadataPending,"MediaFusion + mpv filename should create provisional episode identity");
+assert.equal(mfCandidate.info.identitySource,"MediaFusion route + filename");
+assert.equal(mfCandidate.info.code,"S02E08");
+assert(!mfCandidate.info.parentImdbId,"Never manufacture IMDb ID from MediaFusion route");
+assert(!identify({path:mfUrl},[ep("The Legend of Vox Machina",2,7,"mpv-filename")],norm),"Disagreeing route and filename must be rejected");
+assert(!identify({path:mfUrl.replace("mediafusion.elfhosted.com","unknown.example")},[sourceTagged],norm),"Untrusted MediaFusion-like hosts must be rejected");
+assert(!identify({path:mfUrl},[ep("The Legend of Vox Machina",2,8,"title in the file")],norm),"Localized media-title labels must not imply series identity");
+const falloutName="Fallout.S02E07.MULTi.VF2.2160p.4KLight.DV.HDR10Plus.WEBRip.EAC3.5.1.x265-GANDALF.mkv";
+const falloutURL="https://mediafusion.elfhosted.com/streaming_provider/redacted/playback/torbox/"+hash+"/2/7/redacted";
+const fallout=identify({path:falloutURL,filename:falloutName,mediaTitle:"Fallout (2024)",metadataTitle:"Fallout (2024)"},
+  [{p:{title:"Fallout",year:null,season:2,episode:7,episodeTitle:"MULTi VF2",extra:false,lead:false,dated:false,seasonWords:false},source:"mpv-filename",weak:false}],norm);
+assert(fallout&&fallout.info,"Real Fallout MediaFusion fixture should identify provisionally");
+assert.equal(fallout.info.code,"S02E07");
+assert.equal(fallout.info.showTitle,"Fallout");
+assert.equal(fallout.info.epTitle,"Episode 7");
+assert.equal(fallout.info.metadataPending,true);
+assert(!fallout.info.parentImdbId,"MediaFusion route alone has no IMDb");
 const bad=inspectUrls({url:"https://foo.invalid/stream?media_id=tt6517102&media_type=movie&media_type=series"});
 assert(bad.conflict);
 const main=fs.readFileSync(path.join(__dirname,"../main.js"),"utf8");
@@ -64,6 +84,6 @@ assert(!lightCSS.includes("body .thm.on { background:rgba(229,9,20,.22)"),"Faded
 const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,"../Info.json"),"utf8"));
 assert.equal(manifest.identifier,"io.github.olivergiangvu.iinaepisodeinfoplus");
 assert.equal(manifest.ghRepo,"olivergiangvu/iina-episode-info-plus");
-assert.equal(manifest.ghVersion,4);
-assert.equal(manifest.version,"0.1.0");
+assert.equal(manifest.ghVersion,5);
+assert.equal(manifest.version,"0.1.1-beta.1");
 console.log("Episode Info Plus: 16+ identity, integration and theme assertions PASS");

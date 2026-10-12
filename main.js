@@ -1,4 +1,4 @@
-// IINA Plugin: Episode Info Plus v0.1.0 Stable
+// IINA Plugin: Episode Info Plus v0.1.1-beta.1
 
 const { core, event, utils, file, menu } = iina;
 const episodePlusIdentity = require("./episode-plus-identity.js");
@@ -911,6 +911,15 @@ async function alReadings(h, link) {
     var sn = null;
     try { sn = await alStremioName(st); } catch (e) { sn = null; }
     if (sn) out.push(alReading(sn.file, sn.folder ? [sn.folder] : [], "Stremio"));
+  }
+  // IINA's mpv filename is often the only authoritative release name for
+  // MediaFusion/TorBox streams. The URL may contain ONLY a hash and S/E.
+  // Reject opaque URLs, tokenized labels and non-video titles here.
+  var mpvFilename = String(h.filename || "").trim();
+  if (mpvFilename.length > 0 && mpvFilename.length <= 500 &&
+      AL_VIDEO_EXT.test(mpvFilename) &&
+      !/^\\w+:\\/\\//.test(mpvFilename) && !/[?&#]/.test(mpvFilename)) {
+    out.push(alReading(mpvFilename.split(/[\\\\/]/).pop(), [], "mpv-filename"));
   }
   // DMM/mpv can put the real filename inside an opaque player label:
   // 98800072:1?h=<hash>&file=Better.Call.Saul.S03E03.mkv
