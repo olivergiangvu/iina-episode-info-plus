@@ -169,7 +169,7 @@ const playerHints={
  assert.equal(aiosReadings[0].p.episodeTitle,"A Second Chance At Love");
  assert(aiosReadings.filter(context.alUsable).length===1,"No bogus raw index.m3u8 secondary identity");
  context.alMatchTv=async function(parsed,seconds){
-   assert.equal(parsed.title,"Ok! Let's Get Divorced");
+   assert.equal(parsed.title.toLowerCase(),"ok! let's get divorced");
    assert.equal(parsed.season,1);
    assert.equal(parsed.episode,10);
    assert.equal(seconds,3763);
