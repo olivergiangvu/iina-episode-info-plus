@@ -6,6 +6,7 @@ function num(s,lo,hi){if(!/^\d{1,4}$/.test(String(s)))return null;var n=+s;retur
 function inspectUrls(h){
  var urls=[h.path,h.url].filter(function(x,i,a){return /^https?:\/\//i.test(String(x||""))&&a.indexOf(x)===i;});
  var ids=[],tmdb=[],types=[],seasons=[],episodes=[];
+ var positionSource="";
  function addId(x){var m=/^(tt\d{6,10})(?::(\d{1,3}):(\d{1,4}))?$/i.exec(String(x||"").trim());
   if(m){ids.push(m[1].toLowerCase());if(m[2]!=null){seasons.push(+m[2]);episodes.push(+m[3]);types.push("episode");}}}
  urls.forEach(function(url){var bare=String(url).split("#")[0],q=bare.indexOf("?"),path=q<0?bare:bare.slice(0,q);
@@ -22,21 +23,31 @@ function inspectUrls(h){
   // Accept this positional hint only on known provider hosts.
   var mf=/^https?:\/\/(?:mediafusion(?:-dev)?\.elfhosted\.com|mediafusionfortheweebs\.midnightignite\.me)\/streaming_provider\/[^/?#]+\/playback\/[a-z][a-z0-9_-]{1,30}\/[a-f0-9]{40}(?:[a-f0-9]{24})?\/(\d{1,3})\/(\d{1,4})(?:\/|$)/i.exec(path);
   if(mf){var ms=num(mf[1],0,100),me=num(mf[2],1,9999);
-    if(ms!==null&&me!==null){seasons.push(ms);episodes.push(me);types.push("episode");}}
+    if(ms!==null&&me!==null){seasons.push(ms);episodes.push(me);types.push("episode");positionSource="mediafusion";}}
   var seg=path.split("/"),at=seg.indexOf("playback"),tail=at<0?[]:seg.slice(at+1);
   if(/^[0-9a-f]{40}$/i.test(tail[0]||"")&&tail.length>=5){var s=num(tail[3],0,100),e=num(tail[4],1,9999);if(s!==null&&e!==null){seasons.push(s);episodes.push(e);types.push("episode");}}
  });
  function uniq(a){return a.filter(function(x,i){return a.indexOf(x)===i;});}
  ids=uniq(ids);tmdb=uniq(tmdb);types=uniq(types);seasons=uniq(seasons);episodes=uniq(episodes);
  return {imdb:ids[0]||"",tmdb:tmdb[0]||0,type:types[0]||"",season:seasons.length===1?seasons[0]:null,
-  episode:episodes.length===1?episodes[0]:null,conflict:ids.length>1||tmdb.length>1||types.length>1||seasons.length>1||episodes.length>1};
+  episode:episodes.length===1?episodes[0]:null,positionSource:positionSource,conflict:ids.length>1||tmdb.length>1||types.length>1||seasons.length>1||episodes.length>1};
 }
 function identify(h,readings,normalize){
- var id=inspectUrls(h||{});if(id.conflict||(!id.imdb&&!id.tmdb))return null;
+ var id=inspectUrls(h||{});
+ // Without external IDs, only a trusted MediaFusion S/E route + a real mpv
+ // release filename can produce a provisional match (never an ID-verified one).
+ var routeOnly=!id.imdb&&!id.tmdb&&id.positionSource==="mediafusion"&&
+   id.type==="episode"&&id.season!==null&&id.episode!==null;
+ if(id.conflict||(!id.imdb&&!id.tmdb&&!routeOnly))return null;
  var rs=(readings||[]).filter(function(r){return r&&r.p;});
  if(rs.some(function(r){return !!r.p.extra;}))return null;
  var choices=rs.filter(function(r){var p=r.p;return !!p.title&&!p.extra&&!p.dated&&!p.lead&&!p.seasonWords&&
    ((p.season!=null&&p.episode!=null)||(p.episode==null&&p.year!=null&&!r.weak));});
+ if(routeOnly) {
+   // Never infer a SERIES NAME from a localized episode title, movie label,
+   // unidentified generic stream name, arbitrary URL path or TorBox hash.
+   choices=choices.filter(function(r){return r.source==="mpv-filename"||r.source==="embedded-stream-filename";});
+ }
  if(!choices.length)return null;
  var p=choices[0].p,movie=p.episode==null,norm=normalize||function(x){return String(x||"").toLowerCase();};
  if((movie&&id.type==="episode")||(!movie&&id.type==="movie"))return null;
@@ -45,12 +56,15 @@ function identify(h,readings,normalize){
  if(id.episode!=null&&(movie||id.episode!==p.episode))return null;
  if(choices.some(function(r){var x=r.p;return (x.episode==null)!==movie||norm(x.title)!==norm(p.title)||
   (!movie&&((x.season!=null&&x.season!==p.season)||(x.episode!=null&&x.episode!==p.episode)));}))return null;
+ var epName=String(p.episodeTitle||"").trim();
+ // Release audio/language/edition tags are not an episode title.
+ if(/^(?:multi|vf\d|vff|vostfr|truefrench|french|dubbed|dual|eng|web|eac3|ddp|hdr|dv)\b/i.test(epName))epName="";
  var info={isMovie:movie,isStream:true,showTitle:movie?"Movie":p.title,
-   epTitle:movie?p.title:(p.episodeTitle||"Episode "+p.episode),
+   epTitle:movie?p.title:(epName||"Episode "+p.episode),
    code:movie?String(p.year||""):"S"+String(p.season).padStart(2,"0")+"E"+String(p.episode).padStart(2,"0"),
-   airDate:"",rating:"",overview:"Metadata pending (TMDB unavailable)",posterUrl:"",
+   airDate:"",rating:"",overview:"Fetching verified episode details…",posterUrl:"",
    tmdbId:id.tmdb?String(id.tmdb):"",season:movie?null:p.season,episode:movie?null:p.episode,
-   identitySource:id.imdb?"IMDb + filename":"TMDB ID + filename",metadataPending:true};
+   identitySource:id.imdb?"IMDb + filename":(id.tmdb?"TMDB ID + filename":"MediaFusion route + filename"),metadataPending:true};
  if(id.imdb){if(movie)info.imdbId=id.imdb;else info.parentImdbId=id.imdb;}
  return {info:info,from:choices[0].source||"playback",query:p.title};
 }

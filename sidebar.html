@@ -371,6 +371,11 @@
     </label>
   </div>
   <div id="auto-status" style="display:none;font-size:11px;color:rgba(255,255,255,.5);line-height:1.45;margin-top:6px"></div>
+  <details id="epplus-metadata-diagnostics" style="margin-top:6px">
+    <summary style="font-size:10px;opacity:.8;cursor:pointer">Metadata API diagnostics</summary>
+    <button id="epplus-metadata-test" onclick="epplusTestMetadata()" style="background:rgba(130,140,150,.12);border:1px solid rgba(130,140,150,.35);border-radius:5px;padding:5px 7px;color:inherit;font-size:11px;margin-top:6px;cursor:pointer">Test metadata APIs</button>
+    <div id="epplus-metadata-test-results" role="status" aria-live="polite" style="font-size:10px;line-height:1.5;margin-top:5px;white-space:pre-line;overflow-wrap:anywhere"></div>
+  </details>
 </div>
 
 <div id="ov-dismiss">
@@ -408,7 +413,7 @@
   </div>
 </div>
 <div id="api-ok" style="display:none;background:rgba(48,209,88,0.09);border:1px solid rgba(48,209,88,0.3);border-radius:7px;padding:6px 12px;margin-bottom:12px;font-size:11px;display:none;justify-content:space-between;align-items:center">
-  <span style="color:rgba(48,209,88,0.9)">&#10003; API key active</span>
+  <span style="color:rgba(48,209,88,0.9)">&#10003; TMDB API key saved</span>
   <button onclick="doChangeKey()" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:11px;cursor:pointer;padding:0">Change</button>
 </div>
 
@@ -1023,6 +1028,7 @@ function doToggleOverlay(enabled) {
 // Automatic Lookup (experimental)
 // Matches go in epinfo_auto_map, never in the user's own picks or Recent Picks
 var AUTO_MAP_CAP = 300;
+var AUTO_ENGINE_REV = 3; // Retry previous provisional entries with the corrected HTTP transport.
 var autoShown = false;   // the saved card is showing a match, not a pick
 
 function autoLookupOn() {
@@ -1058,6 +1064,20 @@ function rememberAuto(url, entry) {
   saveAutoMap(m);
 }
 
+function epplusTestMetadata(){
+  var b=document.getElementById("epplus-metadata-test");
+  var area=document.getElementById("epplus-metadata-test-results");
+  if(b)b.disabled=true;
+  if(area)area.textContent="Testing API endpoints…";
+  iina.postMessage("metadataHealthCheck",{});
+}
+iina.onMessage("metadataHealthResult",function(data){
+  var b=document.getElementById("epplus-metadata-test");
+  var area=document.getElementById("epplus-metadata-test-results");
+  if(b)b.disabled=false;
+  if(area)area.textContent=(data&&data.checks||[]).map(function(c){return c.name+": "+c.status;}).join("\n")||"No results";
+});
+
 // Status line under the switch; detail is the reason
 function autoStatus(text, detail) {
   var el = document.getElementById("auto-status");
@@ -1090,8 +1110,12 @@ function startAutoLookup(url) {
   if (hit && hit.info) {
     showAutoMatch(hit.info);
     // A provisional match is useful offline; retry enrichment later.
-    if (!hit.info.metadataPending || !TK || (hit.retryAt && Date.now() < hit.retryAt)) return;
-    rememberAuto(url, { info: hit.info, retryAt: Date.now() + 120000 });
+    // Previous beta stored a 5-minute retry cooldown. A new matching engine
+    // must not leave old placeholder metadata blocking its improved fallback.
+    var staleEngine = hit.info.metadataPending && hit.engineRev !== AUTO_ENGINE_REV;
+    if (!hit.info.metadataPending || (!TK && !staleEngine) ||
+        (!staleEngine && hit.retryAt && Date.now() < hit.retryAt)) return;
+    rememberAuto(url, { info: hit.info, retryAt: Date.now() + 120000, engineRev: AUTO_ENGINE_REV });
     iina.postMessage("autoLookup", { url: url });
     return;
   }
@@ -1111,9 +1135,10 @@ function showAutoMatch(info) {
     stage.style.marginLeft = "4px";
     marker.appendChild(stage);
   }
-  stage.textContent = info.metadataPending ? "· Provisional identity (not TMDB-verified)" : "· TMDB verified";
+  var verifiedSource = info.metadataSource==="TVmaze" ? "TVmaze" : "TMDB";
+  stage.textContent = info.metadataPending ? "· Provisional identity (not verified)" : "· "+verifiedSource+" verified";
   stage.style.color = info.metadataPending ? "#a76b20" : "#1b9555";
-  autoStatus(info.metadataPending ? "Recognized via playback ID · TMDB details pending" : "Matched and verified via TMDB");
+  autoStatus(info.metadataPending ? "Episode recognized from playback filename · fetching metadata" : "Matched and verified via "+verifiedSource);
 }
 
 iina.onMessage("autoLookupResult", function(d) {
@@ -1121,7 +1146,7 @@ iina.onMessage("autoLookupResult", function(d) {
   // A pick made while the lookup ran wins.
   if (document.getElementById("saved").classList.contains("on") && !autoShown) return;
   if (d.info) {
-    rememberAuto(d.url, { info: d.info, retryAt: d.info.metadataPending ? Date.now() + 120000 : 0 });
+    rememberAuto(d.url, { info: d.info, retryAt: d.info.metadataPending ? Date.now() + 120000 : 0, engineRev: AUTO_ENGINE_REV });
     showAutoMatch(d.info);
   } else {
     autoStatus("Not sure what this is — search below.", d.reason);
@@ -1144,8 +1169,13 @@ iina.onMessage("autoEnrichmentFailed", function(d) {
   if (!d || d.url !== currentVideoUrl || !autoLookupOn() || !autoShown) return;
   var hit = loadAutoMap()[d.url];
   if (!hit || !hit.info || !hit.info.metadataPending) return;
-  rememberAuto(d.url, { info: hit.info, retryAt: Date.now() + 300000 });
-  autoStatus("Episode identified · TMDB temporarily unavailable", d.reason || "Metadata will be retried");
+  hit.info.overview = "Episode recognized, but full metadata is unavailable. Retry later or search manually.";
+  rememberAuto(d.url, { info: hit.info, retryAt: Date.now() + 300000, engineRev: AUTO_ENGINE_REV });
+  // Update the sidebar AND the pause overlay: no endless loading placeholder.
+  showAutoMatch(hit.info);
+  var wasNetworkFailure=d.failureKind==="request-failed";
+  autoStatus(wasNetworkFailure ? "Episode recognized · metadata services unreachable" :
+    "Episode recognized · no verified metadata found", d.reason || "Metadata will be retried");
 });
 
 // "Not right? Search": forget the match and never guess this file again

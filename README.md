@@ -8,9 +8,15 @@ Maintained as an independent fork of [Zain Imam's Episode Info](https://github.c
 
 ## Episode Info Plus features
 
-**Stable release v0.1.0** — promoted from beta.3 after IINA/macOS real-world validation of automatic episode lookup and Light/Dark UI. Playback-matching behavior, local settings/storage keys, subtitle sources and overlay functionality are unchanged.
+**v0.1.1 Stable** — promoted from the beta.3 build validated on real IINA/macOS playback (Fallout S02E07), with the same matching engine, sidebar and overlay behavior. This release includes:
 
-**Stable v0.1.0 includes the beta.3 accessibility fix:** targeted macOS Light Mode contrast correction for nested section headings, language labels, light-theme selected tabs, disabled subtitle/search controls, warnings and theme sliders. Dark Mode and stored preferences are not changed.
+- **MediaFusion/TorBox matching:** read real `mpv.filename` release names before `Fallout (2024)`-style display titles; verify season/episode against supported playback routes and avoid premature movie classification.
+- **Metadata request compatibility:** encode TMDB/TVmaze query parameters into URLs before using the IINA HTTP bridge, including numeric season/episode fields. Distinguish a candidate 404 from transport failures.
+- **Fallback:** TMDB remains primary; if unavailable or unable to confirm, TVmaze can enrich a conservatively matched TV episode without an extra API key. TVmaze fallback passed automated tests; independent on-device fallback has not yet been confirmed.
+- **Diagnostics:** user-triggered TMDB and TVmaze endpoint checks under Automatic Lookup, without exposing stored credentials or playback tokens.
+- **UI:** original high-contrast macOS Light/Dark sidebar, PiP overlays and existing settings remain unchanged.
+
+**Previous stable:** v0.1.0. It remains available from Releases for rollback.
 
 - Playback metadata: explicit IMDb/TMDB IDs, normalized filenames, Comet streaming URLs and Stremio IDs; improved embedded filename parsing (DMM) and safe MediaFusion season/episode route hints.
 - Two-stage lookup: a clearly marked **provisional** identity appears immediately when playback signals agree; TMDB fills in poster, synopsis and episode metadata later.
@@ -26,9 +32,9 @@ Open **IINA → Settings/Preferences → Plugins → Install from GitHub** and e
 https://github.com/olivergiangvu/iina-episode-info-plus
 ```
 
-Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **0.1.0**. The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
+Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **0.1.1** (GitHub Latest). The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
 
-GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (currently 4). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
+GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (currently **8** for v0.1.1 Stable). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
 
 ## Preserving settings
 
@@ -44,9 +50,11 @@ Structured external-ID + season/episode conflict checks
 Provisional identity, when evidence is consistent
           ↓
 TMDB verification and metadata enrichment
-          ├─ verified → full overlay
-          ├─ timeout → keep provisional identity
-          └─ mismatch → clear provisional / manual search
+          ├─ verified → full overlay (TMDB)
+          ├─ unavailable / no exact match → TVmaze fallback (TV only)
+          │             ├─ verified → full overlay (TVmaze)
+          │             └─ unavailable → keep provisional identity
+          └─ conflict → clear provisional / manual search
 ```
 
 Provisional IMDb + filename association is not yet proof that the provider ID belongs to that title. Route-only season/episode identification without show ID must not claim a verified show.
