@@ -8,7 +8,7 @@ Maintained as an independent fork of [Zain Imam's Episode Info](https://github.c
 
 ## Episode Info Plus features
 
-**v0.1.2-beta.1 (staging):** Parse `#aios_title=...` from AIOStreams HLS playback URLs and IINA display labels, including `index.m3u8#aios_title=OK! Let's Get Divorced · S01E10 · A Second Chance At Love`. Normalize the explicit series/S/E title for TMDB verification without trusting opaque HLS paths or claiming unverified external IDs. Reject contradictory AIOStreams fragment values. No Trakt+ changes and no new permissions. Stable remains v0.1.1.
+**v0.1.2 Stable** — promoted from v0.1.2-beta.1 after a successful on-device IINA test of AIOStreams HLS playback. Parse `#aios_title=...` from streaming URL fragments and IINA display labels, including `index.m3u8#aios_title=OK! Let's Get Divorced · S01E10 · A Second Chance At Love`. The fix resolves the generic `index.m3u8` / “there is no usable name” issue, normalizes series + S/E for TMDB verification, and rejects contradictory titles without trusting a fragment as an external ID. Metadata, poster, episode details and overlay were user-verified. **No Trakt+ changes, new permissions, or settings migrations.**
 
 **v0.1.1 Stable** — promoted from the beta.3 build validated on real IINA/macOS playback (Fallout S02E07), with the same matching engine, sidebar and overlay behavior. This release includes:
 
@@ -18,7 +18,7 @@ Maintained as an independent fork of [Zain Imam's Episode Info](https://github.c
 - **Diagnostics:** user-triggered TMDB and TVmaze endpoint checks under Automatic Lookup, without exposing stored credentials or playback tokens.
 - **UI:** original high-contrast macOS Light/Dark sidebar, PiP overlays and existing settings remain unchanged.
 
-**Previous stable:** v0.1.0. It remains available from Releases for rollback.
+**Previous stable:** v0.1.1 (and v0.1.0) remain available from Releases for rollback.
 
 - Playback metadata: explicit IMDb/TMDB IDs, normalized filenames, Comet streaming URLs and Stremio IDs; improved embedded filename parsing (DMM) and safe MediaFusion season/episode route hints.
 - Two-stage lookup: a clearly marked **provisional** identity appears immediately when playback signals agree; TMDB fills in poster, synopsis and episode metadata later.
@@ -34,9 +34,9 @@ Open **IINA → Settings/Preferences → Plugins → Install from GitHub** and e
 https://github.com/olivergiangvu/iina-episode-info-plus
 ```
 
-Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **0.1.1** (GitHub Latest). The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
+Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **0.1.2** (GitHub Latest). The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
 
-GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (currently **8** for v0.1.1 Stable). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
+GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (currently **10** for v0.1.2 Stable). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
 
 ## Preserving settings
 
