@@ -8,6 +8,8 @@ Maintained as an independent fork of [Zain Imam's Episode Info](https://github.c
 
 ## Episode Info Plus features
 
+**v0.1.2-beta.1 (staging):** Parse `#aios_title=...` from AIOStreams HLS playback URLs and IINA display labels, including `index.m3u8#aios_title=OK! Let's Get Divorced · S01E10 · A Second Chance At Love`. Normalize the explicit series/S/E title for TMDB verification without trusting opaque HLS paths or claiming unverified external IDs. Reject contradictory AIOStreams fragment values. No Trakt+ changes and no new permissions. Stable remains v0.1.1.
+
 **v0.1.1 Stable** — promoted from the beta.3 build validated on real IINA/macOS playback (Fallout S02E07), with the same matching engine, sidebar and overlay behavior. This release includes:
 
 - **MediaFusion/TorBox matching:** read real `mpv.filename` release names before `Fallout (2024)`-style display titles; verify season/episode against supported playback routes and avoid premature movie classification.

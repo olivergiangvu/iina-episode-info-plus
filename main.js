@@ -1,9 +1,10 @@
-// IINA Plugin: Episode Info Plus v0.1.1 Stable
+// IINA Plugin: Episode Info Plus v0.1.2-beta.1
 
 const { core, event, utils, file, menu } = iina;
 const episodePlusIdentity = require("./episode-plus-identity.js");
 const episodePlusTvmaze = require("./episode-plus-tvmaze.js");
 const episodePlusHttp = require("./episode-plus-http.js");
+const episodePlusAios = require("./episode-plus-aios.js");
 // Messages to the overlay and sidebar go through messageSafe()
 const overlay = safeMessenger(iina.overlay, ["loadFile", "onMessage", "show", "hide", "setClickable"]);
 const sidebar = safeMessenger(iina.sidebar, ["loadFile", "onMessage"]);
@@ -908,6 +909,11 @@ async function alStremioName(st) {
 // Every name the file is known by, best first.
 async function alReadings(h, link) {
   var out = [];
+  // Playback HLS filenames are often just index.m3u8. The explicit AIOStreams
+  // #aios_title= fragment carries the actual TV show + S/E, not the path.
+  var aios=episodePlusAios.extract(h);
+  if(aios && !aios.conflict)out.push(alReading(aios.file, [], "aios-title"));
+
   var st = alStremioPath(link);
   if (st) {
     var sn = null;
@@ -951,9 +957,12 @@ async function alReadings(h, link) {
                        link.scheme !== "file" && !AL_VIDEO_EXT.test(last)));
   }
   var lastSeg = link.segments.length ? link.segments[link.segments.length - 1] : "";
-  if (h.metadataTitle) {
+  // Never parse index.m3u8#aios_title=... as a second, contradictory
+  // "media title". Only the normalized embedded episode title is useful.
+  if (h.metadataTitle && !/#(?:[^#]*&)?aios_title=/i.test(h.metadataTitle)) {
     out.push(alReading(h.metadataTitle, [], "title in the file", true));
-  } else if (h.mediaTitle && h.mediaTitle !== lastSeg && h.mediaTitle !== h.filename) {
+  } else if (h.mediaTitle && h.mediaTitle !== lastSeg && h.mediaTitle !== h.filename &&
+             !/#(?:[^#]*&)?aios_title=/i.test(h.mediaTitle)) {
     out.push(alReading(h.mediaTitle, [], "title", true));
   }
   return out;
@@ -1261,6 +1270,8 @@ async function alServerName(url) {
 }
 
 async function alLookup(h, seconds) {
+  var aios=episodePlusAios.extract(h);
+  if(aios&&aios.conflict)return alNotSure("conflicting AIOStreams episode titles", "");
   var link = alSplitLink(h.path || h.url || "");
   var readings = await alReadings(h, link);
   var ids = alIdsFromLink(link);
@@ -1345,6 +1356,11 @@ async function autoLookup(d) {
   // Identity first. TMDB is an enhancement, not a single point of failure.
   try {
     var hints=alHints(),ids=episodePlusIdentity.inspectUrls(hints);
+    var aios=episodePlusAios.extract(hints);
+    if(aios&&aios.conflict){
+      sidebar.postMessage("autoLookupResult",{url:forUrl,info:null,reason:"Conflicting AIOStreams HLS episode titles; manual match required"});
+      return;
+    }
     if(ids.conflict){
       sidebar.postMessage("autoLookupResult",{url:forUrl,info:null,reason:"Conflicting explicit playback IDs; manual match required"});
       return;
