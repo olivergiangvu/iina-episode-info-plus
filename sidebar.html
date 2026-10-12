@@ -413,7 +413,7 @@
   </div>
 </div>
 <div id="api-ok" style="display:none;background:rgba(48,209,88,0.09);border:1px solid rgba(48,209,88,0.3);border-radius:7px;padding:6px 12px;margin-bottom:12px;font-size:11px;display:none;justify-content:space-between;align-items:center">
-  <span style="color:rgba(48,209,88,0.9)">&#10003; API key active</span>
+  <span style="color:rgba(48,209,88,0.9)">&#10003; TMDB API key saved</span>
   <button onclick="doChangeKey()" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:11px;cursor:pointer;padding:0">Change</button>
 </div>
 
@@ -1028,7 +1028,7 @@ function doToggleOverlay(enabled) {
 // Automatic Lookup (experimental)
 // Matches go in epinfo_auto_map, never in the user's own picks or Recent Picks
 var AUTO_MAP_CAP = 300;
-var AUTO_ENGINE_REV = 2; // Retry old provisional results after installing beta.2.
+var AUTO_ENGINE_REV = 3; // Retry previous provisional entries with the corrected HTTP transport.
 var autoShown = false;   // the saved card is showing a match, not a pick
 
 function autoLookupOn() {

@@ -7,6 +7,7 @@ on:
       - main.js
       - episode-plus-identity.js
       - episode-plus-tvmaze.js
+      - episode-plus-http.js
       - sidebar.html
       - overlay.html
       - .github/workflows/release.yml
@@ -26,6 +27,7 @@ jobs:
           node --check main.js
           node --check episode-plus-identity.js
           node --check episode-plus-tvmaze.js
+          node --check episode-plus-http.js
           node tests/episode-plus-identity.test.js
           node <<'NODE'
           const i = require('./Info.json');
@@ -38,7 +40,7 @@ jobs:
         run: |
           mkdir -p dist
           V="$(node -p 'require("./Info.json").version')"
-          zip -q -r "dist/Episode-Info-Plus-$V.iinaplgz" Info.json main.js episode-plus-identity.js episode-plus-tvmaze.js sidebar.html overlay.html LICENSE
+          zip -q -r "dist/Episode-Info-Plus-$V.iinaplgz" Info.json main.js episode-plus-identity.js episode-plus-tvmaze.js episode-plus-http.js sidebar.html overlay.html LICENSE
           unzip -t "dist/Episode-Info-Plus-$V.iinaplgz"
           echo "VERSION=$V" >> "$GITHUB_ENV"
       - name: Publish versioned release (stable or prerelease)

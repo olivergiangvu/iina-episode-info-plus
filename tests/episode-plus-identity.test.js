@@ -60,7 +60,7 @@ assert(main.includes('autoEnrichmentFailed'));assert(main.includes('autoLookupCo
 const side=fs.readFileSync(path.join(__dirname,"../sidebar.html"),"utf8");
 assert(side.includes('iina.onMessage("autoLookupConflict"'));
 assert(side.includes("Provisional identity (not verified)"));
-assert(side.includes("var AUTO_ENGINE_REV = 2;"));
+assert(side.includes("var AUTO_ENGINE_REV = 3;"));
 assert(side.includes("var staleEngine = hit.info.metadataPending"),"Old provisional cache must retry after upgrading matching engine");
 const over=fs.readFileSync(path.join(__dirname,"../overlay.html"),"utf8");
 for(const [label,html] of [["sidebar",side],["overlay",over]]){
@@ -133,8 +133,24 @@ const playerHints={
 const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,"../Info.json"),"utf8"));
 assert.equal(manifest.identifier,"io.github.olivergiangvu.iinaepisodeinfoplus");
 assert.equal(manifest.ghRepo,"olivergiangvu/iina-episode-info-plus");
-assert.equal(manifest.ghVersion,6);
-assert.equal(manifest.version,"0.1.1-beta.2");
+assert.equal(manifest.ghVersion,7);
+assert.equal(manifest.version,"0.1.1-beta.3");
+// Contract test for the actual IINA HTTP bridge: numeric query values are
+// encoded into strings in the URL, never passed as raw numbers in params.
+const bridge=require("../episode-plus-http.js");
+assert.strictEqual(bridge.buildUrl(
+ "https://api.tvmaze.com/shows/49041/episodebynumber",{season:2,number:7}),
+ "https://api.tvmaze.com/shows/49041/episodebynumber?number=7&season=2");
+assert.strictEqual(bridge.buildUrl("https://api.tvmaze.com/search/shows",{q:"Fallout (2024)"}),
+ "https://api.tvmaze.com/search/shows?q=Fallout%20(2024)");
+assert.throws(()=>bridge.buildUrl("https://other.example/secret",{api_key:"test"}));
+assert(!bridge.safeError({message:"https://api.themoviedb.org/3/tv/106379?api_key=SECRET"}).includes("SECRET"));
+assert(main.includes('episodePlusHttp.buildUrl("https://api.themoviedb.org/3" + path,p)'));
+assert(main.includes('episodePlusHttp.buildUrl("https://api.tvmaze.com"+path,params)'));
+assert(main.includes('sidebar.onMessage("metadataHealthCheck"'));
+assert(side.includes('id="epplus-metadata-test"'));
+assert(side.includes('TMDB API key saved'));
+
 // TVmaze verified-metadata tests: no live API key needed.
 const tvmaze=require("../episode-plus-tvmaze.js");
 const mazeShow={id:49041,name:"Fallout",premiered:"2024-04-10",
