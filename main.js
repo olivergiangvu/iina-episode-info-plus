@@ -1480,6 +1480,27 @@ function registerSidebarHandlers() {
     tmdbKey = (d && d.key) ? String(d.key) : "";
   });
 
+  // User-initiated diagnostics return only status; no keys or URL tokens.
+  sidebar.onMessage("metadataHealthCheck", async function() {
+    var probes=[
+      {name:"TMDB show",base:"https://api.themoviedb.org/3/tv/106379",
+       params:tmdbKey?{api_key:tmdbKey}:null,requireKey:true},
+      {name:"TVmaze search",base:"https://api.tvmaze.com/search/shows",params:{q:"Fallout"}},
+      {name:"TVmaze episode",base:"https://api.tvmaze.com/shows/49041/episodebynumber",
+       params:{season:"2",number:"7"}}
+    ],checks=[];
+    for(var i=0;i<probes.length;i++){
+      var p=probes[i];
+      if(p.requireKey&&!tmdbKey){checks.push({name:p.name,status:"No TMDB key"});continue;}
+      try {
+        var res=await withTimeout(iina.http.get(episodePlusHttp.buildUrl(p.base,p.params),
+          {headers:{"Accept":"application/json"}}),8000,p.name);
+        checks.push({name:p.name,status:res.statusCode===200?"OK 200":"HTTP "+res.statusCode});
+      }catch(e){checks.push({name:p.name,status:episodePlusHttp.safeError(e)});}
+    }
+    sidebar.postMessage("metadataHealthResult",{checks:checks});
+  });
+
   // Automatic Lookup: only asked for when switched on
   sidebar.onMessage("autoLookup", function(d) { autoLookup(d); });
 
