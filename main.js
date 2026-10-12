@@ -1,8 +1,9 @@
-// IINA Plugin: Episode Info Plus v0.1.1-beta.2
+// IINA Plugin: Episode Info Plus v0.1.1-beta.3
 
 const { core, event, utils, file, menu } = iina;
 const episodePlusIdentity = require("./episode-plus-identity.js");
 const episodePlusTvmaze = require("./episode-plus-tvmaze.js");
+const episodePlusHttp = require("./episode-plus-http.js");
 // Messages to the overlay and sidebar go through messageSafe()
 const overlay = safeMessenger(iina.overlay, ["loadFile", "onMessage", "show", "hide", "setClickable"]);
 const sidebar = safeMessenger(iina.sidebar, ["loadFile", "onMessage"]);
@@ -991,7 +992,18 @@ async function alTmdb(path, params, ttlHours, trim) {
   if (hit && now - hit.t < (hit.v === null ? 24 : ttlHours) * 3600000) return hit.v;
   var p = { api_key: tmdbKey };
   Object.keys(params).forEach(function(k) { p[k] = params[k]; });
-  var r = await withTimeout(iina.http.get("https://api.themoviedb.org/3" + path, { params: p }), HTTP_TIMEOUT_MS, "TMDB");
+  var r;
+  try {
+    r=await withTimeout(iina.http.get(episodePlusHttp.buildUrl("https://api.themoviedb.org/3" + path,p),{headers:{"Accept":"application/json"}}), HTTP_TIMEOUT_MS, "TMDB");
+  } catch(e) {
+    var detail=episodePlusHttp.safeError(e);
+    // A candidate show or season may return 404. Skip that candidate,
+    // without aborting the entire metadata search or fallback chain.
+    if(/not found|404/i.test(detail) && /^\/(tv|movie)\/\d+(?:\/season\/\d+)?$/.test(path)) {
+      alCache[key]={t:now,v:null};alCacheDirty=true;return null;
+    }
+    throw new Error("TMDB "+(path.indexOf("/search/")===0?"search":"details")+" request failed: "+detail);
+  }
   if (r.statusCode === 404) { alCache[key] = { t: now, v: null }; alCacheDirty = true; return null; }
   if (r.statusCode !== 200) throw new Error("TMDB answered " + r.statusCode);
   var v = trim(r.data || JSON.parse(r.text || "{}"));
@@ -1310,9 +1322,15 @@ async function alTvmazeFallback(fast,hints,seconds){
    title:info.showTitle,season:info.season,episode:info.episode,
    year:year||null,seconds:seconds
  },async function(path,params){
-   var response=await withTimeout(
-     iina.http.get("https://api.tvmaze.com"+path,{params:params}),9000,"TVmaze"
-   );
+   var response;
+   var label=path.indexOf("/search/")===0?"show search":"episode details";
+   try {
+     response=await withTimeout(iina.http.get(episodePlusHttp.buildUrl("https://api.tvmaze.com"+path,params),{headers:{"Accept":"application/json"}}),9000,"TVmaze "+label);
+   }catch(e){
+     var detail=episodePlusHttp.safeError(e);
+     if(/not found|404/i.test(detail))return null;
+     throw new Error("TVmaze "+label+" failed: "+detail);
+   }
    if(response.statusCode===404)return null;
    if(response.statusCode!==200)throw new Error("TVmaze HTTP "+response.statusCode);
    return response.data || JSON.parse(response.text||"null");

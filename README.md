@@ -8,9 +8,11 @@ Maintained as an independent fork of [Zain Imam's Episode Info](https://github.c
 
 ## Episode Info Plus features
 
-**v0.1.1-beta.2 — metadata fallback:** When TMDB cannot verify a MediaFusion/filename match, attempt a second source via the official public TVmaze API. Accept only an exactly matching series name, unambiguous premiere year when available, and verified S/E/rough runtime; show TVmaze as the source. Use the series poster and episode synopsis without inventing a TMDB ID. No TVmaze key needed; two new network allowlist hosts: api.tvmaze.com and static.tvmaze.com. The v0.1.0 Stable release is unchanged.
+**0.1.1-beta.3:** correct IINA HTTP query handling by serializing every query value to an encoded URL (including numeric season/episode), and classify endpoint-specific metadata failures. Includes an in-plugin, read-only metadata API diagnostic (no credentials exposed).
 
-**0.1.1-beta.2 bug fix (Fallout S02E07):** Prioritize true mpv release filenames over display titles like `Fallout (2024)`. When a recognized MediaFusion route agrees on S/E, allow a **provisional** show/episode card even without IMDb/TMDB IDs; then use TMDB to verify and enrich. Route-only or episode-title-only matches remain rejected. No new host permissions, settings changes or Trakt integration.
+**v0.1.1-beta.3 — metadata fallback:** When TMDB cannot verify a MediaFusion/filename match, attempt a second source via the official public TVmaze API. Accept only an exactly matching series name, unambiguous premiere year when available, and verified S/E/rough runtime; show TVmaze as the source. Use the series poster and episode synopsis without inventing a TMDB ID. No TVmaze key needed; two new network allowlist hosts: api.tvmaze.com and static.tvmaze.com. The v0.1.0 Stable release is unchanged.
+
+**0.1.1-beta.3 bug fix (Fallout S02E07):** Prioritize true mpv release filenames over display titles like `Fallout (2024)`. When a recognized MediaFusion route agrees on S/E, allow a **provisional** show/episode card even without IMDb/TMDB IDs; then use TMDB to verify and enrich. Route-only or episode-title-only matches remain rejected. No new host permissions, settings changes or Trakt integration.
 
 **Stable release v0.1.0** — promoted from beta.3 after IINA/macOS real-world validation of automatic episode lookup and Light/Dark UI. Playback-matching behavior, local settings/storage keys, subtitle sources and overlay functionality are unchanged.
 
@@ -30,7 +32,7 @@ Open **IINA → Settings/Preferences → Plugins → Install from GitHub** and e
 https://github.com/olivergiangvu/iina-episode-info-plus
 ```
 
-Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **0.1.0**. MediaFusion filename matching fix is available for testing in **0.1.1-beta.2** (prerelease). The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
+Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **0.1.0**. MediaFusion filename matching fix is available for testing in **0.1.1-beta.3** (prerelease). The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
 
 GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (beta branch currently 5). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
 
