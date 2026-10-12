@@ -4,6 +4,7 @@ const fs=require("fs");
 const path=require("path");
 const vm=require("vm");
 const {identify,inspectUrls}=require("../episode-plus-identity.js");
+const aios=require("../episode-plus-aios.js");
 const norm=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"");
 function ep(title,s,e,source){return {p:{title,season:s,episode:e,year:null,episodeTitle:"Bless Your Dead Little Hearts"},source:source||"filename",weak:false};}
 const hash="a".repeat(40);
@@ -89,9 +90,42 @@ assert(!lightCSS.includes("body .thm.on { background:rgba(229,9,20,.22)"),"Faded
 const sourceStart=main.indexOf("var AL_VIDEO_EXT = ");
 const sourceEnd=main.indexOf("// TMDB, cached",sourceStart);
 assert(sourceStart>=0 && sourceEnd>sourceStart, "Cannot locate real main.js parser functions");
-const context=vm.createContext({});
+const context=vm.createContext({episodePlusAios:aios});
 vm.runInContext(main.slice(sourceStart,sourceEnd),context,{filename:"main-episode-parser.js"});
 assert.equal(typeof context.alReadings,"function");
+// Regression: exact AIOStreams HLS media label from the IINA screenshot.
+// The generic index.m3u8 path MUST NOT erase #aios_title season/episode.
+const aiosLabel="index.m3u8#aios_title=Ok! Let's Get Divorced · S01E10 · A Second Chance At Love";
+const aiosUrl="https://stream.example.test/media/index.m3u8#aios_title="+
+ encodeURIComponent("OK! Let's Get Divorced · S01E10 · A Second Chance At Love");
+for(const given of [aiosLabel,aiosUrl]){
+ const result=aios.parse(given);
+ assert(result&&!result.conflict,"AIOStreams structured HLS fragment should parse");
+ assert.equal(result.title.toLowerCase(),"ok! let's get divorced");
+ assert.equal(result.season,1);
+ assert.equal(result.episode,10);
+ assert.equal(result.episodeTitle,"A Second Chance At Love");
+ assert.equal(result.file.slice(0,22).toLowerCase(),"ok! let's get divorced");
+ assert(result.file.includes("S01E10"));
+}
+assert.equal(aios.parse("https://host.invalid/index.m3u8"),null,"Opaque HLS path must never produce a title");
+assert.equal(aios.parse("https://host.invalid/watch#token=s3e10"),null,"Unknown fragment key must not match");
+assert.equal(aios.parse("https://host.invalid/index.m3u8#aios_title=Random Movie"),null,
+ "A show name without season and episode is not sufficient");
+assert.equal(aios.parse("https://host.invalid/index.m3u8#aios_title=Video%20%C2%B7%20S01E00"),null,
+ "Zero episode is invalid");
+assert(aios.extract({path:aiosUrl,mediaTitle:"index.m3u8#aios_title=Different Show · S01E10 · Pilot"}).conflict,
+ "Conflicting player title vs URL fragment must be rejected");
+assert(!aios.extract({path:aiosUrl,mediaTitle:aiosLabel}).conflict,
+ "Case-only title variants must agree");
+const displayOnlyHints={
+ path:"https://stream.example.test/media/index.m3u8",
+ url:"https://stream.example.test/media/index.m3u8",
+ filename:"index.m3u8#aios_title=Ok! Let's Get Divorced · S01E10 · A Second Chance At Love",
+ mediaTitle:aiosLabel,
+ metadataTitle:""
+};
+
 const playerHints={
  path:falloutURL,url:falloutURL,filename:falloutName,
  mediaTitle:"Fallout (2024)",metadataTitle:"Fallout (2024)"
@@ -125,6 +159,39 @@ const playerHints={
  context.alFromImdb=async function(){throw Error("MediaFusion URL has no IMDb ID");};
  vm.runInContext(main.slice(lookupStart,lookupEnd),context,{filename:"main-lookup.js"});
  const result=await context.alLookup(playerHints,()=>3000);
+ // IINA screenshot #aios_title flows through real parser -> TV TMDB lookup,
+ // including when only the display/file-name label contains the fragment.
+ const aiosReadings=await context.alReadings(displayOnlyHints,context.alSplitLink(displayOnlyHints.path));
+ assert.equal(aiosReadings[0].source,"aios-title");
+ assert.equal(aiosReadings[0].p.title,"Ok! Let's Get Divorced");
+ assert.equal(aiosReadings[0].p.season,1);
+ assert.equal(aiosReadings[0].p.episode,10);
+ assert.equal(aiosReadings[0].p.episodeTitle,"A Second Chance At Love");
+ assert(aiosReadings.filter(context.alUsable).length===1,"No bogus raw index.m3u8 secondary identity");
+ context.alMatchTv=async function(parsed,seconds){
+   assert.equal(parsed.title,"Ok! Let's Get Divorced");
+   assert.equal(parsed.season,1);
+   assert.equal(parsed.episode,10);
+   assert.equal(seconds,3763);
+   return {info:{showTitle:"OK! Let's Get Divorced",epTitle:"A Second Chance At Love",
+     code:"S01E10",isMovie:false}};
+ };
+ const aiosResult=await context.alLookup(displayOnlyHints,()=>3763);
+ assert(aiosResult.info&&aiosResult.info.code==="S01E10");
+ assert.equal(aiosResult.info.epTitle,"A Second Chance At Love");
+ assert.equal(aiosResult.from,"Ok! Let's Get Divorced S01E10 - A Second Chance At Love");
+ const fromUrl={path:aiosUrl,url:aiosUrl,filename:"index.m3u8",mediaTitle:"index.m3u8"};
+ const fromUrlReadings=await context.alReadings(fromUrl,context.alSplitLink(fromUrl.path));
+ assert.equal(fromUrlReadings[0].p.title,"OK! Let's Get Divorced");
+ const fromUrlResult=await context.alLookup(fromUrl,()=>3763);
+ assert(fromUrlResult.info&&fromUrlResult.info.code==="S01E10");
+ const conflicting={...displayOnlyHints,path:aiosUrl,
+   mediaTitle:"index.m3u8#aios_title=Different Show · S01E10 · Pilot"};
+ const disallowed=await context.alLookup(conflicting,()=>3763);
+ assert(!disallowed.info&&/conflicting/i.test(disallowed.reason),
+   "Conflicting fragments must fail closed");
+ console.log("AIOStreams HLS fragment integration: S01E10 lookup and conflict handling PASS");
+
  assert(result.info&&result.info.code==="S02E07");
  assert.equal(result.info.epTitle,"The Handoff");
  console.log("Fallout integration: real filename parser, trusted route, correct TV lookup PASS");
@@ -133,8 +200,8 @@ const playerHints={
 const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,"../Info.json"),"utf8"));
 assert.equal(manifest.identifier,"io.github.olivergiangvu.iinaepisodeinfoplus");
 assert.equal(manifest.ghRepo,"olivergiangvu/iina-episode-info-plus");
-assert.equal(manifest.ghVersion,8);
-assert.equal(manifest.version,"0.1.1");
+assert.equal(manifest.ghVersion,9);
+assert.equal(manifest.version,"0.1.2-beta.1");
 // Contract test for the actual IINA HTTP bridge: numeric query values are
 // encoded into strings in the URL, never passed as raw numbers in params.
 const bridge=require("../episode-plus-http.js");
