@@ -886,6 +886,7 @@ function pickItem(item) {
   // If auto-search recognized S/E but not the show, honor that positional
   // hint ONLY after the user explicitly chooses a TV series.
   var hint=autoHint&&autoHint.url===currentVideoUrl?autoHint:null;
+  var forUrl=currentVideoUrl;
   autoHint=null;
   selShow   = item;
   selSeason = null;
@@ -897,6 +898,7 @@ function pickItem(item) {
     fetch("https://api.themoviedb.org/3/movie/"+item.id+"?api_key="+TK)
       .then(function(r){return r.json();})
       .then(function(d){
+        if(selShow!==item||currentVideoUrl!==forUrl)return;
         var info = { showTitle:"Movie", epTitle:d.title,
           code: d.release_date?d.release_date.slice(0,4):"",
           airDate:d.release_date||"", isStream:false,
@@ -906,7 +908,8 @@ function pickItem(item) {
           tmdbId: String(item.id), season: null, episode: null, isMovie: true };
         saveSelection(info);
       }).catch(function(){
-        document.getElementById("panel").innerHTML='<div class="msg">Failed to load.</div>';
+        if(selShow===item&&currentVideoUrl===forUrl)
+          document.getElementById("panel").innerHTML='<div class="msg">Failed to load.</div>';
       });
     return;
   }
@@ -916,7 +919,7 @@ function pickItem(item) {
   fetch("https://api.themoviedb.org/3/tv/"+item.id+"?api_key="+TK)
     .then(function(r){return r.json();})
     .then(function(show){
-      if(selShow!==item)return; // selection replaced while TMDB was loading
+      if(selShow!==item||currentVideoUrl!==forUrl)return; // stale playback/show
       selShow._name    = show.name;
       selShow._seasons = (show.seasons||[]).filter(function(s){return s.season_number>0;});
       if(hint&&Number.isInteger(hint.season)&&Number.isInteger(hint.episode)&&
@@ -926,7 +929,8 @@ function pickItem(item) {
       }
       renderSeasons();
     }).catch(function(){
-      document.getElementById("panel").innerHTML='<div class="msg">Failed to load seasons.</div>';
+      if(selShow===item&&currentVideoUrl===forUrl)
+        document.getElementById("panel").innerHTML='<div class="msg">Failed to load seasons.</div>';
     });
 }
 
@@ -951,17 +955,17 @@ function pickSeason(n){
 }
 
 function renderEps(sNum) {
-  var el = document.getElementById("ep");
-  if (!el) return;
+  var el = document.getElementById("ep"),forShow=selShow,forUrl=currentVideoUrl;
+  if (!el||!forShow) return;
   el.innerHTML = '<div class="msg"><span class="sp"></span>Loading episodes…</div>';
-  fetch("https://api.themoviedb.org/3/tv/"+selShow.id+"/season/"+sNum+"?api_key="+TK)
+  fetch("https://api.themoviedb.org/3/tv/"+forShow.id+"/season/"+sNum+"?api_key="+TK)
     .then(function(r){return r.json();})
     .then(function(s){
+      if(selShow!==forShow||currentVideoUrl!==forUrl||selSeason!==sNum)return;
       // Store season poster for overlay
       seasonPosterUrl = s.poster_path
         ? "https://image.tmdb.org/t/p/w500" + s.poster_path
         : (selShow && selShow.poster_path ? "https://image.tmdb.org/t/p/w500" + selShow.poster_path : "");
-      if(!selShow||selSeason!==sNum)return;
       episodeCache = s.episodes || [];
       // Only an explicitly chosen show may use the inferred S/E position.
       var want=selShow._wantEp;
@@ -981,7 +985,10 @@ function renderEps(sNum) {
       el.innerHTML =
         '<div class="sec" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.07)">' +
         '<div class="sl">Episode</div><div class="pills">'+pills+'</div></div>';
-    }).catch(function(){ el.innerHTML='<div class="msg">Failed to load episodes.</div>'; });
+    }).catch(function(){
+      if(selShow===forShow&&currentVideoUrl===forUrl&&selSeason===sNum)
+        el.innerHTML='<div class="msg">Failed to load episodes.</div>';
+    });
 }
 
 function pickEp(idx) {

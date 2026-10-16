@@ -143,6 +143,24 @@ async function run(){
  picker.selShow._wantEp=7;
  picker.pickSeason(1);
  assert.equal(picker.selShow._wantEp,null);
+ // A pending season response from a prior playback/series must never select
+ // an episode belonging to the newly chosen show.
+ let resolveOldSeason;
+ picker.currentVideoUrl="stream/episode";
+ picker.selShow={id:321,name:"Old",_wantEp:7};
+ picker.selSeason=2;
+ picker.fetch=async function(){
+  return new Promise(resolve=>{resolveOldSeason=resolve});
+ };
+ picker.renderEps(2);
+ assert.equal(typeof resolveOldSeason,"function");
+ picker.currentVideoUrl="stream/new-video";
+ picker.selShow={id:654,name:"New",_wantEp:null};
+ resolveOldSeason({json:async()=>({
+  poster_path:null,episodes:[{episode_number:7,name:"Old Show Episode"}]
+ })});
+ for(let i=0;i<7;i++)await Promise.resolve();
+ assert.equal(selected.length,1,"Never save stale episode after video/series switches");
  assert(side.includes("autoHint=canSearch&&Number.isInteger(d.season)"));
  assert(main.includes("out.season=p.season; out.episode=p.episode;"));
  assert(main.includes("reply.season=out.season;reply.episode=out.episode;"));
