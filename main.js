@@ -1,4 +1,4 @@
-// IINA Plugin: Episode Info Plus v0.1.2 Stable
+// IINA Plugin: Episode Info Plus v0.1.3-beta.1
 
 const { core, event, utils, file, menu } = iina;
 const episodePlusIdentity = require("./episode-plus-identity.js");
@@ -1006,12 +1006,15 @@ async function alTmdb(path, params, ttlHours, trim) {
     r=await withTimeout(iina.http.get(episodePlusHttp.buildUrl("https://api.themoviedb.org/3" + path,p),{headers:{"Accept":"application/json"}}), HTTP_TIMEOUT_MS, "TMDB");
   } catch(e) {
     var detail=episodePlusHttp.safeError(e);
-    // A candidate show or season may return 404. Skip that candidate,
-    // without aborting the entire metadata search or fallback chain.
-    if(/not found|404/i.test(detail) && /^\/(tv|movie)\/\d+(?:\/season\/\d+)?$/.test(path)) {
+    // IINA throws HTTP response objects on 4xx. Use structured status first:
+    // string-only inspection misses 404 when the object has no message.
+    var httpStatus=e&&Number(e.statusCode||(e.response&&e.response.statusCode));
+    var candidatePath=/^\/(?:tv|movie)\/\d+(?:\/season\/\d+)?$/.test(path);
+    if (candidatePath && (httpStatus===404 || (!httpStatus && /(?:not found|\b404\b)/i.test(detail)))) {
       alCache[key]={t:now,v:null};alCacheDirty=true;return null;
     }
-    throw new Error("TMDB "+(path.indexOf("/search/")===0?"search":"details")+" request failed: "+detail);
+    throw new Error("TMDB "+(path.indexOf("/search/")===0?"search":"details")+" request failed: "+
+      (httpStatus?"HTTP "+httpStatus:detail));
   }
   if (r.statusCode === 404) { alCache[key] = { t: now, v: null }; alCacheDirty = true; return null; }
   if (r.statusCode !== 200) throw new Error("TMDB answered " + r.statusCode);
@@ -1283,7 +1286,12 @@ async function alLookup(h, seconds) {
     if (served) readings.push(alReading(served, [], "server"));
   }
   if (ids.imdb) {
-    var exact = await alFromImdb(ids, readings);
+    // A failing ID endpoint does not make the show name/episode disappear.
+    // Continue with conservative title + S/E matching when TMDB is reachable.
+    var exact = null;
+    try { exact = await alFromImdb(ids, readings); } catch(e) {
+      log("Episode Info Plus: IMDb lookup failed; trying title + S/E");
+    }
     if (exact) return exact;
   }
 
@@ -1309,6 +1317,11 @@ async function alLookup(h, seconds) {
   if (!(len > 0)) return alNotSure("its length is unknown (a live stream?)", p.title);
   var out = p.episode != null ? await alMatchTv(p, len) : await alMatchMovie(p, len);
   if (out.info) out.from = primary.from;
+  // Preserve S/E only as a manual-search navigation hint; never as proof
+  // of series identity or a trigger for unattended scrobbling.
+  else if (p.season != null && p.episode != null) {
+    out.season=p.season; out.episode=p.episode;
+  }
   return out;
 }
 
@@ -1387,6 +1400,9 @@ async function autoLookup(d) {
   try {
     var out=await alLookup(alHints(),alSeconds);
     reply.info=out.info||null;reply.query=out.query||"";reply.reason=out.reason||"";
+    if(!reply.info && out.season!=null && out.episode!=null){
+      reply.season=out.season;reply.episode=out.episode;
+    }
     if(reply.info&&fast){
       var before=fast.info,after=reply.info;
       var nameBefore=before.isMovie?before.epTitle:before.showTitle;
@@ -1457,6 +1473,7 @@ function registerSidebarHandlers() {
 
   // ON/OFF toggle from sidebar
   sidebar.onMessage("setOverlayEnabled", function(d) {
+    sidebarSettingsIn = true;
     overlayEnabled = !!d.enabled;
     if (!overlayEnabled) hideOverlay();
     log("Overlay " + (overlayEnabled ? "enabled" : "disabled"));
@@ -1517,8 +1534,12 @@ function registerSidebarHandlers() {
     sidebar.postMessage("metadataHealthResult",{checks:checks});
   });
 
-  // Automatic Lookup: only asked for when switched on
-  sidebar.onMessage("autoLookup", function(d) { autoLookup(d); });
+  // Auto-lookup events may arrive before the separate setTmdbKey event.
+  // Pass the key only in the IINA IPC message; never add it to stored history.
+  sidebar.onMessage("autoLookup", function(d) {
+    if(d && d.key) tmdbKey=String(d.key);
+    autoLookup(d);
+  });
 
   // "Search again" in the sidebar: ignore the cache and look once more.
   sidebar.onMessage("refreshSkip", function() {
@@ -2142,8 +2163,23 @@ function setupSidebar() {
   if (!sidebarLoaded) {
     sidebar.loadFile("sidebar.html");
     sidebarLoaded = true;
-    setTimeout(registerSidebarHandlers, 500);
+    setTimeout(function(){
+      registerSidebarHandlers();
+      askForSidebarSettings(5);
+    }, 500);
   }
+}
+
+// On a busy Mac the sidebar can send settings before main registers handlers.
+// Never overwrite a later user change: the sidebar reads CURRENT localStorage
+// at the moment it answers, and subsequent user controls still send updates.
+var sidebarSettingsIn=false;
+function askForSidebarSettings(tries){
+  setTimeout(function(){
+    if(sidebarSettingsIn || tries<=0)return;
+    sidebar.postMessage("resendSettings",{});
+    askForSidebarSettings(tries-1);
+  },2000);
 }
 
 var overlayHandlersRegistered = false;
