@@ -31,6 +31,7 @@ jobs:
           node --check episode-plus-http.js
           node --check episode-plus-aios.js
           node tests/episode-plus-identity.test.js
+          node tests/upstream-134-integration.test.js
           node <<'NODE'
           const i = require('./Info.json');
           if (i.ghRepo !== 'olivergiangvu/iina-episode-info-plus' ||
