@@ -666,6 +666,9 @@ var seasonPosterUrl = "";
 
 // Per-URL memory: each video URL keeps its own pick
 var currentVideoUrl = "";
+// A hint is *not* a verification. A human must choose the correct series.
+var autoHint=null; // {url, season, episode}
+var autoSearchGeneration=0;
 function loadUrlMap() {
   try { return JSON.parse(localStorage.getItem("epinfo_url_map") || "{}"); }
   catch(e) { return {}; }
@@ -809,24 +812,29 @@ function setLoading(on) {
   document.getElementById("q").disabled  = on;
 }
 
-async function doSearch() {
+async function doSearch(auto) {
   var q = (document.getElementById("q").value || "").trim();
   if (!q) return;
-  pushSearch(q);
-  setLoading(true);
+  var automatic=auto===true;
+  var requestUrl=currentVideoUrl,requestGen=++autoSearchGeneration;
+  if (!automatic) { pushSearch(q); autoHint=null; }
+  // Automatic searches never disable the input: a user's typed query wins.
+  if (!automatic) setLoading(true);
   document.getElementById("panel").innerHTML =
     '<div class="msg"><span class="sp"></span>Searching…</div>';
   try {
     var r    = await fetch("https://api.themoviedb.org/3/search/multi?api_key=" + TK +
       "&query=" + encodeURIComponent(q) + "&include_adult=false");
     var data = await r.json();
+    if (requestGen!==autoSearchGeneration || requestUrl!==currentVideoUrl ||
+        (automatic && document.getElementById("q").value.trim()!==q)) return;
     var list = (data.results||[])
       .filter(function(x){ return x.media_type==="tv"||x.media_type==="movie"; })
       .slice(0,8);
 
     if (!list.length) {
       document.getElementById("panel").innerHTML = '<div class="msg">No results found.</div>';
-      setLoading(false); return;
+      if(!automatic)setLoading(false); return;
     }
 
     // Results live in an array; onclick passes the index
@@ -849,9 +857,11 @@ async function doSearch() {
     // for pickItemByIndex
     document.getElementById("panel")._searchCache = searchCache;
   } catch(e) {
-    document.getElementById("panel").innerHTML = '<div class="msg">Search failed.</div>';
+    if (requestGen===autoSearchGeneration && requestUrl===currentVideoUrl &&
+        (!automatic || document.getElementById("q").value.trim()===q))
+      document.getElementById("panel").innerHTML = '<div class="msg">Search failed.</div>';
   }
-  setLoading(false);
+  if(!automatic && requestGen===autoSearchGeneration)setLoading(false);
 }
 
 // Escape text going into innerHTML
@@ -872,6 +882,12 @@ function pickItemByIndex(i) {
 }
 
 function pickItem(item) {
+  ++autoSearchGeneration; // invalidate any ongoing auto-search
+  // If auto-search recognized S/E but not the show, honor that positional
+  // hint ONLY after the user explicitly chooses a TV series.
+  var hint=autoHint&&autoHint.url===currentVideoUrl?autoHint:null;
+  var forUrl=currentVideoUrl;
+  autoHint=null;
   selShow   = item;
   selSeason = null;
   episodeCache = [];
@@ -882,6 +898,7 @@ function pickItem(item) {
     fetch("https://api.themoviedb.org/3/movie/"+item.id+"?api_key="+TK)
       .then(function(r){return r.json();})
       .then(function(d){
+        if(selShow!==item||currentVideoUrl!==forUrl)return;
         var info = { showTitle:"Movie", epTitle:d.title,
           code: d.release_date?d.release_date.slice(0,4):"",
           airDate:d.release_date||"", isStream:false,
@@ -891,7 +908,8 @@ function pickItem(item) {
           tmdbId: String(item.id), season: null, episode: null, isMovie: true };
         saveSelection(info);
       }).catch(function(){
-        document.getElementById("panel").innerHTML='<div class="msg">Failed to load.</div>';
+        if(selShow===item&&currentVideoUrl===forUrl)
+          document.getElementById("panel").innerHTML='<div class="msg">Failed to load.</div>';
       });
     return;
   }
@@ -901,11 +919,18 @@ function pickItem(item) {
   fetch("https://api.themoviedb.org/3/tv/"+item.id+"?api_key="+TK)
     .then(function(r){return r.json();})
     .then(function(show){
+      if(selShow!==item||currentVideoUrl!==forUrl)return; // stale playback/show
       selShow._name    = show.name;
       selShow._seasons = (show.seasons||[]).filter(function(s){return s.season_number>0;});
+      if(hint&&Number.isInteger(hint.season)&&Number.isInteger(hint.episode)&&
+         selShow._seasons.some(function(s){return s.season_number===hint.season;})){
+        selSeason=hint.season;
+        selShow._wantEp=hint.episode;
+      }
       renderSeasons();
     }).catch(function(){
-      document.getElementById("panel").innerHTML='<div class="msg">Failed to load seasons.</div>';
+      if(selShow===item&&currentVideoUrl===forUrl)
+        document.getElementById("panel").innerHTML='<div class="msg">Failed to load seasons.</div>';
     });
 }
 
@@ -923,20 +948,33 @@ function renderSeasons() {
   if (selSeason!==null) renderEps(selSeason);
 }
 
-function pickSeason(n){ selSeason=n; renderSeasons(); }
+function pickSeason(n){
+  selSeason=n;
+  if(selShow)selShow._wantEp=null; // user chose a season manually
+  renderSeasons();
+}
 
 function renderEps(sNum) {
-  var el = document.getElementById("ep");
-  if (!el) return;
+  var el = document.getElementById("ep"),forShow=selShow,forUrl=currentVideoUrl;
+  if (!el||!forShow) return;
   el.innerHTML = '<div class="msg"><span class="sp"></span>Loading episodes…</div>';
-  fetch("https://api.themoviedb.org/3/tv/"+selShow.id+"/season/"+sNum+"?api_key="+TK)
+  fetch("https://api.themoviedb.org/3/tv/"+forShow.id+"/season/"+sNum+"?api_key="+TK)
     .then(function(r){return r.json();})
     .then(function(s){
+      if(selShow!==forShow||currentVideoUrl!==forUrl||selSeason!==sNum)return;
       // Store season poster for overlay
       seasonPosterUrl = s.poster_path
         ? "https://image.tmdb.org/t/p/w500" + s.poster_path
         : (selShow && selShow.poster_path ? "https://image.tmdb.org/t/p/w500" + selShow.poster_path : "");
       episodeCache = s.episodes || [];
+      // Only an explicitly chosen show may use the inferred S/E position.
+      var want=selShow._wantEp;
+      if(want!=null){
+        selShow._wantEp=null;
+        for(var idx=0;idx<episodeCache.length;idx++){
+          if(episodeCache[idx].episode_number===want){pickEp(idx);return;}
+        }
+      }
 
       var pills = "";
       episodeCache.forEach(function(ep, i){
@@ -947,7 +985,10 @@ function renderEps(sNum) {
       el.innerHTML =
         '<div class="sec" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.07)">' +
         '<div class="sl">Episode</div><div class="pills">'+pills+'</div></div>';
-    }).catch(function(){ el.innerHTML='<div class="msg">Failed to load episodes.</div>'; });
+    }).catch(function(){
+      if(selShow===forShow&&currentVideoUrl===forUrl&&selSeason===sNum)
+        el.innerHTML='<div class="msg">Failed to load episodes.</div>';
+    });
 }
 
 function pickEp(idx) {
@@ -1011,6 +1052,23 @@ function saveSelection(info) {
     iina.postMessage("setOverlayEnabled", { enabled: enabled });
   }, 600);
 })();
+
+// Main can miss startup settings on a busy IINA launch. Only resend CURRENT
+// localStorage values and do not mutate persisted settings or user choices.
+iina.onMessage("resendSettings",function(){
+  var get=function(key){try{return localStorage.getItem(key);}catch(e){return null;}};
+  iina.postMessage("setOverlayEnabled",{enabled:get("epinfo_overlay_enabled")!=="false"});
+  var opacity=get("epinfo_overlay_opacity");
+  if(opacity!==null)iina.postMessage("setOverlayOpacity",{value:parseFloat(opacity)});
+  var position=get("epinfo_overlay_vpos");
+  if(position!==null)iina.postMessage("setOverlayVerticalPos",{value:parseFloat(position)});
+  var delay=get("epinfo_pause_delay"),seconds=delay===null?3:parseFloat(delay);
+  if(Number.isFinite(seconds)&&seconds>=0.5)iina.postMessage("setPauseDelay",{value:seconds});
+  iina.postMessage("setTmdbKey",{key:get("epinfo_tmdb_key")||""});
+  iina.postMessage("setOverlayTheme",{value:get("epinfo_overlay_theme")||"classic"});
+  iina.postMessage("setSkipEnabled",{enabled:get("epinfo_skip_enabled")==="true"});
+  iina.postMessage("sidebarReady",{});
+});
 
 function updateToggleVisual(enabled) {
   var track = document.getElementById("toggle-track");
@@ -1116,12 +1174,12 @@ function startAutoLookup(url) {
     if (!hit.info.metadataPending || (!TK && !staleEngine) ||
         (!staleEngine && hit.retryAt && Date.now() < hit.retryAt)) return;
     rememberAuto(url, { info: hit.info, retryAt: Date.now() + 120000, engineRev: AUTO_ENGINE_REV });
-    iina.postMessage("autoLookup", { url: url });
+    iina.postMessage("autoLookup", { url: url, key: TK });
     return;
   }
   if (!TK) autoStatus("TMDB key missing — trying playback ID + filename only.");
   else autoStatus("Identifying episode…");
-  iina.postMessage("autoLookup", { url: url });
+  iina.postMessage("autoLookup", { url: url, key: TK });
 }
 
 function showAutoMatch(info) {
@@ -1149,9 +1207,17 @@ iina.onMessage("autoLookupResult", function(d) {
     rememberAuto(d.url, { info: d.info, retryAt: d.info.metadataPending ? Date.now() + 120000 : 0, engineRev: AUTO_ENGINE_REV });
     showAutoMatch(d.info);
   } else {
-    autoStatus("Not sure what this is — search below.", d.reason);
-    var q = document.getElementById("q");
-    if (q && !q.value && d.query) q.value = d.query;
+    var q=document.getElementById("q");
+    // Only start if the user has not typed their own query and this is the
+    // CURRENT playback item. No updates to Recent Searches.
+    var canSearch=!!(q&&!q.value&&d.query&&TK);
+    autoHint=canSearch&&Number.isInteger(d.season)&&Number.isInteger(d.episode)
+      ? {url:d.url,season:d.season,episode:d.episode}:null;
+    autoStatus(canSearch?"Not sure — choose a result below.":"Not sure — search below.",d.reason);
+    if(canSearch){
+      q.value=d.query;
+      doSearch(true);
+    }else if(q&&!q.value&&d.query)q.value=d.query;
   }
 });
 
@@ -1186,10 +1252,13 @@ function doAutoWrong() {
   autoShown = false;
   showUnidentified();
   autoStatus("Search below for the right one.");
+  autoHint=info&&!info.isMovie&&Number.isInteger(info.season)&&Number.isInteger(info.episode)
+    ? {url:currentVideoUrl,season:info.season,episode:info.episode}:null;
   var q = document.getElementById("q");
   if (q) {
     q.value = info ? ((info.isMovie ? info.epTitle : info.showTitle) || "") : "";
-    q.focus();
+    if(q.value&&TK)doSearch(true);
+    else q.focus();
   }
 }
 
@@ -1199,6 +1268,8 @@ iina.onMessage("overlayStatus", function(d){
 });
 // File changed: restore the pick for a URL we know, otherwise clear
 iina.onMessage("fileChanged", function(d){
+  ++autoSearchGeneration;
+  autoHint=null;
   currentVideoUrl = (d && d.url) || "";
 
   // Reset search panel state regardless

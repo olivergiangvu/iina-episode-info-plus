@@ -8,6 +8,8 @@ Maintained as an independent fork of [Zain Imam's Episode Info](https://github.c
 
 ## Episode Info Plus features
 
+**v0.1.3-beta.1 — selective upstream 1.3.4 integration:** Harden TMDB candidate 404 handling using IINA error `statusCode`; recover sidebar settings lost during busy startup; automatically present TMDB search results when episode identification is uncertain; and, only after the user picks a TV series, navigate to the inferred season/episode. AIOStreams, MediaFusion, TVmaze, Light/Dark/PiP styling, subtitle functions, and stored settings are unchanged. The conservative bare-title movie shortcut is intentionally deferred to avoid false positives. v0.1.2 remains Latest Stable until on-device verification.
+
 **v0.1.2 Stable** — promoted from v0.1.2-beta.1 after a successful on-device IINA test of AIOStreams HLS playback. Parse `#aios_title=...` from streaming URL fragments and IINA display labels, including `index.m3u8#aios_title=OK! Let's Get Divorced · S01E10 · A Second Chance At Love`. The fix resolves the generic `index.m3u8` / “there is no usable name” issue, normalizes series + S/E for TMDB verification, and rejects contradictory titles without trusting a fragment as an external ID. Metadata, poster, episode details and overlay were user-verified. **No Trakt+ changes, new permissions, or settings migrations.**
 
 **v0.1.1 Stable** — promoted from the beta.3 build validated on real IINA/macOS playback (Fallout S02E07), with the same matching engine, sidebar and overlay behavior. This release includes:
