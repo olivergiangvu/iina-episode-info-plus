@@ -21,7 +21,7 @@ assert(c>0&&e>c);
 const clear=overlay.slice(c,e);
 for(const rule of [
  "background:transparent","background:rgba(10,16,24,.84)",
- "opacity:clamp(.70,var(--bg-opacity),1)","color:#f9fbff",
+ "opacity:clamp(.72,var(--bg-opacity),1)","color:#f9fbff",
  "color:rgba(255,255,255,.94)","color:#ffd25b","text-shadow:0 1px 2px"
 ])assert(clear.includes(rule),"Glass Clear loses readability rule: "+rule);
 assert(!clear.includes("rgba(248,251,253"),
@@ -29,11 +29,16 @@ assert(!clear.includes("rgba(248,251,253"),
 assert(!clear.includes("color:#142132"),"Former low contrast dark text must not return");
 // WCAG worst case: a totally white video frame under the guaranteed minimum
 // smoked alpha (0.84*.68); white title must remain readable at >=4.5:1.
-const alpha=.84*.70;
+const alpha=.84*.72;
 const bg=[10,16,24].map(c=>Math.round(c*alpha+255*(1-alpha)));
 const srgb=c=>{let s=c/255;return s<=.04045?s/12.92:Math.pow((s+.055)/1.055,2.4)};
 const luminance=rgb=>.2126*srgb(rgb[0])+.7152*srgb(rgb[1])+.0722*srgb(rgb[2]);
 const fg=[249,251,255],contrast=(luminance(fg)+.05)/(luminance(bg)+.05);
+const secondary=bg.map(c=>Math.round(255*.94+c*.06));
+const secondaryContrast=(luminance(secondary)+.05)/(luminance(bg)+.05);
+assert(secondaryContrast>=4.5,
+ "Secondary text (Cast, synopsis and Up Next) must also meet WCAG AA: "+
+ secondaryContrast.toFixed(2));
 assert(contrast>=4.5,"Smoked glass should pass AA on a pure white video: "+contrast.toFixed(2));
 assert(overlay.includes("display:none !important;")&&overlay.includes("color:CanvasText !important;"),
  "High-contrast accessibility must bypass decorative glass tints");

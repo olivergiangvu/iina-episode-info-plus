@@ -273,7 +273,7 @@
        an unpredictable grey/video luminance. Video pixels cannot be sampled
        by the separate IINA overlay WebView, so invert the MATERIAL, not the
        text. A neutral dark smoked glass works in both macOS appearances.
-       At the minimum Shade threshold .68, the .84-black tint produces
+       At the minimum Shade threshold .72, the .84-black tint produces
        >=4.5:1 white text even above an entirely white frame. */
     #wrap[data-theme="glass"][data-glass="clear"] #card {
       background:transparent;
@@ -285,7 +285,7 @@
       display:block;
       background:rgba(10,16,24,.84);
       opacity:.72; /* for older WebKit without clamp() */
-      opacity:clamp(.70,var(--bg-opacity),1);
+      opacity:clamp(.72,var(--bg-opacity),1);
     }
     #wrap[data-theme="glass"][data-glass="clear"] #card::after {
       display:block;
