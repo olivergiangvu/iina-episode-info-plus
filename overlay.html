@@ -257,8 +257,10 @@
   /* Episode Info Plus Light/Dark compatibility with opt-in Glass. */
   @media (prefers-color-scheme:light) {
     #wrap[data-theme="glass"] #card {
-      background:rgba(12,14,20,.90);border-color:rgba(255,255,255,.22);
+      background:transparent;border-color:rgba(255,255,255,.22);
     }
+    /* Use a dark fallback behind the poster, not a dark layer covering it. */
+    #wrap[data-theme="glass"] #art {background:rgba(12,14,20,.90);}
     #wrap[data-theme="glass"] .et,#wrap[data-theme="glass"] .person b {color:#fff;}
     #wrap[data-theme="glass"] .sn {color:rgba(255,255,255,.84);}
     #wrap[data-theme="glass"] .mt,#wrap[data-theme="glass"] .ov,
