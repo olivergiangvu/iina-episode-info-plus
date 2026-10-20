@@ -27,6 +27,8 @@ for(const rule of [
 assert(!clear.includes("rgba(248,251,253"),
  "Smoked glass must not include former white haze");
 assert(!clear.includes("color:#142132"),"Former low contrast dark text must not return");
+assert(clear.includes(' #card::after {\n      display:none;'),
+ "Clear must not add a bright specular layer that lowers text contrast");
 // WCAG worst case: a totally white video frame under the guaranteed minimum
 // smoked alpha (0.84*.68); white title must remain readable at >=4.5:1.
 const alpha=.84*.72;
