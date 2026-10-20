@@ -1,4 +1,4 @@
-// IINA Plugin: Episode Info Plus v0.1.2 Stable
+// IINA Plugin: Episode Info Plus v1.3.1 Stable
 
 const { core, event, utils, file, menu } = iina;
 const episodePlusIdentity = require("./episode-plus-identity.js");
@@ -291,7 +291,7 @@ async function segmentsFromApis(imdbId, season, episode) {
       });
     }),
     // TheIntroDB: start_ms/end_ms may be null (from the start / to the end)
-    grab("TheIntroDB", "https://api.theintrodb.org/v2/media?" + qs, function(b) {
+    grab("TheIntroDB", "https://api.theintrodb.org/v4/media?" + qs, function(b) {
       var dur = 0;
       try { dur = iina.mpv.getNumber("duration") || 0; } catch(e) {}
       [["intro", "intro"], ["credits", "outro"]].forEach(function(pair) {
@@ -1006,12 +1006,15 @@ async function alTmdb(path, params, ttlHours, trim) {
     r=await withTimeout(iina.http.get(episodePlusHttp.buildUrl("https://api.themoviedb.org/3" + path,p),{headers:{"Accept":"application/json"}}), HTTP_TIMEOUT_MS, "TMDB");
   } catch(e) {
     var detail=episodePlusHttp.safeError(e);
-    // A candidate show or season may return 404. Skip that candidate,
-    // without aborting the entire metadata search or fallback chain.
-    if(/not found|404/i.test(detail) && /^\/(tv|movie)\/\d+(?:\/season\/\d+)?$/.test(path)) {
+    // IINA throws HTTP response objects on 4xx. Use structured status first:
+    // string-only inspection misses 404 when the object has no message.
+    var httpStatus=e&&Number(e.statusCode||(e.response&&e.response.statusCode));
+    var candidatePath=/^\/(?:tv|movie)\/\d+(?:\/season\/\d+)?$/.test(path);
+    if (candidatePath && (httpStatus===404 || (!httpStatus && /(?:not found|\b404\b)/i.test(detail)))) {
       alCache[key]={t:now,v:null};alCacheDirty=true;return null;
     }
-    throw new Error("TMDB "+(path.indexOf("/search/")===0?"search":"details")+" request failed: "+detail);
+    throw new Error("TMDB "+(path.indexOf("/search/")===0?"search":"details")+" request failed: "+
+      (httpStatus?"HTTP "+httpStatus:detail));
   }
   if (r.statusCode === 404) { alCache[key] = { t: now, v: null }; alCacheDirty = true; return null; }
   if (r.statusCode !== 200) throw new Error("TMDB answered " + r.statusCode);
@@ -1136,13 +1139,14 @@ function alMovieInfo(d) {
   return info;
 }
 
-async function alMatchTv(p, seconds) {
+async function alMatchTv(p, seconds, opts) {
+  opts = opts || {};
   if (p.seasonWords) return alNotSure("its season numbering may not match TMDB's", p.title);
   if (p.season === 0) return alNotSure("specials are numbered differently everywhere", p.title);
   var list = await alSearch("tv", p.title, p.year ? { first_air_date_year: p.year } : null);
   var loose = false;
   if (p.year && !(await alTitleCandidates("tv", list, p.title)).length) {
-    // A year in an episode's name is sometimes when it aired, not when the show began.
+    // The year can be when the episode aired, not when the show began
     list = await alSearch("tv", p.title, null);
     loose = true;
   }
@@ -1156,19 +1160,29 @@ async function alMatchTv(p, seconds) {
   if (p.country) cands = cands.filter(function(c) { return c.country.indexOf(p.country) >= 0; });
   if (!cands.length) return alNotSure("TMDB has no show called “" + p.title + "”", p.title);
 
-  // A show we can't check (no season number) still counts against one that fits
+  // A show we can't check still blocks one that fits
   var fits = [], why = "", unresolved = "";
   for (var i = 0; i < Math.min(3, cands.length); i++) {
     var d = await alTvDetails(cands[i].id);
     if (!d) continue;
     var regular = d.seasons.filter(function(n) { return n > 0; });
-    var season = p.season;
+    var season = p.season, sd = null, ep = null;
     if (season == null) {
-      if (regular.length !== 1) { why = unresolved = "no season number, and “" + d.name + "” has several"; continue; }
-      season = regular[0];
+      if (regular.length === 1) {
+        season = regular[0];
+      } else if (opts.absolute) {
+        var abs = await alAbsolute(d, p.episode);
+        if (abs.none) { why = "“" + d.name + "” has no episode " + p.episode; continue; }
+        if (!abs.season) { why = unresolved = "no season number, and “" + d.name + "” has several"; continue; }
+        season = abs.season; sd = abs.sd; ep = abs.ep;
+      } else {
+        why = unresolved = "no season number, and “" + d.name + "” has several"; continue;
+      }
     }
-    var sd = await alSeason(d.id, season);
-    var ep = sd ? sd.episodes.filter(function(e) { return e.n === p.episode; })[0] : null;
+    if (!sd) {
+      sd = await alSeason(d.id, season);
+      ep = sd ? sd.episodes.filter(function(e) { return e.n === p.episode; })[0] : null;
+    }
     if (!ep) { why = "“" + d.name + "” has no S" + alPad2(season) + "E" + alPad2(p.episode); continue; }
     if (!alLengthFits(seconds, ep.runtime, p.episodes)) { why = "the video's length doesn't match the episode"; continue; }
     fits.push({ votes: d.votes, info: alTvInfo(d, sd, ep, season) });
@@ -1208,6 +1222,96 @@ async function alMatchMovie(p, seconds) {
     return top ? { info: top.info, query: p.title } : alNotSure("several films called “" + p.title + "” fit", p.title);
   }
   return alNotSure(why || "no matching film", p.title);
+}
+
+// Anime or not, and episodes per season
+function alTvShape(id) {
+  return alTmdb("/tv/" + id, {}, 24, function(x) {
+    var genres = (x.genres || []).map(function(g) { return g.id; });
+    var japanese = x.original_language === "ja" || (x.origin_country || []).indexOf("JP") >= 0;
+    return { anime: genres.indexOf(16) >= 0 && japanese,
+             counts: (x.seasons || []).filter(function(s) { return s.season_number > 0; })
+               .sort(function(a, b) { return a.season_number - b.season_number; })
+               .map(function(s) { return [s.season_number, s.episode_count || 0]; }) };
+  });
+}
+
+// Absolute number to TMDB's season and episode (One Piece - 1089)
+async function alAbsolute(d, n) {
+  var shape = await alTvShape(d.id);
+  if (!shape) return {};
+  var total = shape.counts.reduce(function(t, c) { return t + c[1]; }, 0);
+  // Far past the show's end, even if TMDB is behind: some other show
+  if (n > total * 1.5 + 10) return { none: true };
+  if (!shape.anime) return {};
+  var longest = shape.counts.reduce(function(m, c) { return Math.max(m, c[1]); }, 0);
+  // Only past the longest season, "Title - 12" could be any season
+  if (n <= longest || n > total) return {};
+  var before = 0;
+  for (var i = 0; i < shape.counts.length; i++) {
+    var s = shape.counts[i][0], c = shape.counts[i][1];
+    if (n <= before + c) {
+      var sd = await alSeason(d.id, s);
+      if (!sd || !sd.episodes.length) return {};
+      // Some seasons continue the numbering, others restart at 1
+      var ep = sd.episodes[0].n > 1 ? sd.episodes.filter(function(e) { return e.n === n; })[0] : sd.episodes[n - before - 1];
+      return ep ? { season: s, sd: sd, ep: ep } : {};
+    }
+    before += c;
+  }
+  return {};
+}
+
+// Too generic to trust (Part 2, Day 3, IV)
+var AL_GENERIC_TITLE = /^(?:(?:part|pt|episode|ep|chapter|ch|day|night|week|vol|volume|disc|disk|cd|take|scene|clip|act|round|game|session|lesson|lecture|track|book|issue|no)\.?\s*)?(?:\d+|[ivxl]+|one|two|three|four|five|six|seven|eight|nine|ten)$/i;
+
+// "Breaking Bad - Felina": one episode with that exact title in a well-known show
+async function alMatchEpisodeTitle(show, title, seconds, year) {
+  var want = alNorm(title);
+  if (want.length < 3 || AL_GENERIC_TITLE.test(title)) return alNotSure("no matching episode", show);
+  var cands = await alTitleCandidates("tv", await alSearch("tv", show, null), show);
+  if (!cands.length) return alNotSure("TMDB has no show called “" + show + "”", show);
+  var found = [], unchecked = "";
+  for (var i = 0; i < Math.min(3, cands.length); i++) {
+    var d = await alTvDetails(cands[i].id);
+    if (!d) continue;
+    var regular = d.seasons.filter(function(n) { return n > 0; });
+    // Too many seasons to check, so don't guess
+    if (regular.length > 30) { unchecked = "“" + d.name + "” has too many seasons to search"; continue; }
+    var seasons = await Promise.all(regular.map(function(n) { return alSeason(d.id, n); }));
+    seasons.forEach(function(sd, s) {
+      (sd ? sd.episodes : []).forEach(function(e) {
+        if (alNorm(e.name) === want) found.push({ d: d, sd: sd, ep: e, season: regular[s] });
+      });
+    });
+  }
+  if (unchecked) return alNotSure(unchecked, show);
+  if (found.length !== 1) return alNotSure(found.length ? "several episodes called “" + title + "”" : "no episode called “" + title + "”", show);
+  var f = found[0];
+  if (f.d.votes < 100) return alNotSure("“" + f.d.name + "” is too little-known to match on an episode's title", show);
+  if (year && Math.abs(alYearOf(f.ep.air) - year) > 1) return alNotSure("the year doesn't match the episode", show);
+  // Tighter than usual, a film can run twice an episode's length
+  var ratio = f.ep.runtime > 0 ? seconds / (f.ep.runtime * 60) : 1;
+  if (ratio < 0.7 || ratio > 1.5) return alNotSure("the video's length doesn't match the episode", show);
+  return { info: alTvInfo(f.d, f.sd, f.ep, f.season), query: show };
+}
+
+// Second tries, only when the normal match isn't sure
+async function alSecondTry(p, seconds, out, reading) {
+  var why = out.reason || "";
+  if (p.episode != null) {
+    if (p.season != null || !/^no season number, and /.test(why)) return out;
+    var again = await alMatchTv(p, seconds, { absolute: true });
+    return again.info ? again : out;
+  }
+  if (!reading.weak && /^TMDB has no film called /.test(why)) {
+    var parts = /^(.+?)\s+[-–—]\s+(.+)$/.exec(p.title);
+    if (parts) {
+      var byTitle = await alMatchEpisodeTitle(parts[1].trim(), parts[2].trim(), seconds, p.year);
+      if (byTitle.info) return byTitle;
+    }
+  }
+  return out;
 }
 
 // An IMDb id in the link settles it
@@ -1283,7 +1387,12 @@ async function alLookup(h, seconds) {
     if (served) readings.push(alReading(served, [], "server"));
   }
   if (ids.imdb) {
-    var exact = await alFromImdb(ids, readings);
+    // A failing ID endpoint does not make the show name/episode disappear.
+    // Continue with conservative title + S/E matching when TMDB is reachable.
+    var exact = null;
+    try { exact = await alFromImdb(ids, readings); } catch(e) {
+      log("Episode Info Plus: IMDb lookup failed; trying title + S/E");
+    }
     if (exact) return exact;
   }
 
@@ -1308,7 +1417,20 @@ async function alLookup(h, seconds) {
   var len = seconds();
   if (!(len > 0)) return alNotSure("its length is unknown (a live stream?)", p.title);
   var out = p.episode != null ? await alMatchTv(p, len) : await alMatchMovie(p, len);
+  // Uncertain anime absolute numbering and "Show - Episode Title" are
+  // verified using exact TMDB metadata, never guessed from a loose title.
+  if(!out.info && !/^couldn't ask TMDB/.test(out.reason||"")){
+    try{
+      var candidate=await alSecondTry(p,len,out,primary);
+      if(candidate.info)out=candidate;
+    }catch(e){ log("Episode Info Plus conservative second try: "+errStr(e)); }
+  }
   if (out.info) out.from = primary.from;
+  // Preserve S/E only as a manual-search navigation hint; never as proof
+  // of series identity or a trigger for unattended scrobbling.
+  else if (p.season != null && p.episode != null) {
+    out.season=p.season; out.episode=p.episode;
+  }
   return out;
 }
 
@@ -1387,6 +1509,9 @@ async function autoLookup(d) {
   try {
     var out=await alLookup(alHints(),alSeconds);
     reply.info=out.info||null;reply.query=out.query||"";reply.reason=out.reason||"";
+    if(!reply.info && out.season!=null && out.episode!=null){
+      reply.season=out.season;reply.episode=out.episode;
+    }
     if(reply.info&&fast){
       var before=fast.info,after=reply.info;
       var nameBefore=before.isMovie?before.epTitle:before.showTitle;
@@ -1457,6 +1582,7 @@ function registerSidebarHandlers() {
 
   // ON/OFF toggle from sidebar
   sidebar.onMessage("setOverlayEnabled", function(d) {
+    sidebarSettingsIn = true;
     overlayEnabled = !!d.enabled;
     if (!overlayEnabled) hideOverlay();
     log("Overlay " + (overlayEnabled ? "enabled" : "disabled"));
@@ -1517,8 +1643,12 @@ function registerSidebarHandlers() {
     sidebar.postMessage("metadataHealthResult",{checks:checks});
   });
 
-  // Automatic Lookup: only asked for when switched on
-  sidebar.onMessage("autoLookup", function(d) { autoLookup(d); });
+  // Auto-lookup events may arrive before the separate setTmdbKey event.
+  // Pass the key only in the IINA IPC message; never add it to stored history.
+  sidebar.onMessage("autoLookup", function(d) {
+    if(d && d.key) tmdbKey=String(d.key);
+    autoLookup(d);
+  });
 
   // "Search again" in the sidebar: ignore the cache and look once more.
   sidebar.onMessage("refreshSkip", function() {
@@ -2142,8 +2272,23 @@ function setupSidebar() {
   if (!sidebarLoaded) {
     sidebar.loadFile("sidebar.html");
     sidebarLoaded = true;
-    setTimeout(registerSidebarHandlers, 500);
+    setTimeout(function(){
+      registerSidebarHandlers();
+      askForSidebarSettings(5);
+    }, 500);
   }
+}
+
+// On a busy Mac the sidebar can send settings before main registers handlers.
+// Never overwrite a later user change: the sidebar reads CURRENT localStorage
+// at the moment it answers, and subsequent user controls still send updates.
+var sidebarSettingsIn=false;
+function askForSidebarSettings(tries){
+  setTimeout(function(){
+    if(sidebarSettingsIn || tries<=0)return;
+    sidebar.postMessage("resendSettings",{});
+    askForSidebarSettings(tries-1);
+  },2000);
 }
 
 var overlayHandlersRegistered = false;

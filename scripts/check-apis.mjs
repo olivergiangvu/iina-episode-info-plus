@@ -329,7 +329,7 @@ async function checkSkipSources() {
   const sources = [
     { name: "IntroDB", url: `https://api.introdb.app/segments?${qs}`,
       valid: (j) => j && "intro" in j, shape: "`intro` key" },
-    { name: "TheIntroDB", url: `https://api.theintrodb.org/v2/media?${qs}`,
+    { name: "TheIntroDB", url: `https://api.theintrodb.org/v4/media?${qs}`,
       valid: (j) => j && (!("intro" in j) || Array.isArray(j.intro)), shape: "`intro` array" },
     { name: "SkipDB", url: `https://api.skipdb.tv/api/segments?${qs}`,
       valid: (j) => j && typeof j.segments === "object", shape: "`segments` object" },
