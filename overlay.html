@@ -357,6 +357,13 @@ iina.onMessage("showData", function(d) {
 
   // Theme first, so it never flashes Classic
   if (d.theme) applyTheme(d.theme);
+  applyWidth(d.width);
+  applyPosterSide(d.poster);
+  applyGlassStyle(d.glass);
+  // CSS-art background accepts only explicitly allowlisted image hosts.
+  var art=String(d.posterUrl||"");
+  var safeArt=/^https:\/\/(?:image\.tmdb\.org|static\.tvmaze\.com)\/[A-Za-z0-9_./%-]+$/.test(art);
+  document.getElementById("card").style.setProperty("--art",safeArt?'url("'+art+'")':"none");
 
   document.getElementById("show-name").textContent = d.showTitle || "";
 
@@ -378,7 +385,24 @@ iina.onMessage("showData", function(d) {
     posterEl.innerHTML = "";
   }
 
-  document.getElementById("wrap").style.display = "block";
+  // Render optional cast and next episode without letting strings introduce
+  // markup, unsupported URLs or attributes.
+  var people=Array.isArray(d.cast)?d.cast.slice(0,4):[];
+  document.getElementById("cast").innerHTML=people.map(function(c){
+    var photo=String(c.photo||"");
+    var safe=/^https:\/\/image\.tmdb\.org\/t\/p\/[a-z0-9]+\/[A-Za-z0-9_./%-]+$/i.test(photo);
+    var role=String(c.role||"").replace(/\s*\((voice|uncredited|archive footage)\)/gi,"").split(" / ")[0];
+    return "<div class='person'>"+(safe?"<img src='"+photo+"' alt='' />":"")+
+      "<span><b>"+esc(c.name)+"</b><i>"+esc(role)+"</i></span></div>";
+  }).join("");
+  var next=d.next,el=document.getElementById("next");
+  el.innerHTML=next?"<span class='lbl'>Up next</span> "+
+    esc(next.code)+" · "+esc(next.title)+(next.date?" · "+esc(next.date):""):"";
+  el.style.display=next?"":"none";
+  var wrap=document.getElementById("wrap");
+  if(people.length||next)wrap.setAttribute("data-extra","");
+  else wrap.removeAttribute("data-extra");
+  wrap.style.display="block";
 });
 
 // Live opacity from the sidebar
