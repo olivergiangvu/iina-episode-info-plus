@@ -87,7 +87,7 @@ function rendered(){return sent.filter(x=>x.type==="showData").at(-1).data}
  for(const t of ['data-theme="glass"','data-glass="clear"','data-glass="colorful"',
    'data-width','data-poster="left"','data-poster="right"'])
   assert(overlayHtml.includes(t),"Missing overlay CSS "+t);
- assert(overlayHtml.includes("@media (prefers-color-scheme:light)"));
+ assert(/@media\s*\(prefers-color-scheme:\s*light\)/.test(overlayHtml));
  assert(overlayHtml.includes("prefers-contrast:more"));
  for(const key of ["epinfo_overlay_width","epinfo_poster_side","epinfo_glass_style",
    "epinfo_card_cast","epinfo_card_next"])
