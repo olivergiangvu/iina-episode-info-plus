@@ -34,6 +34,7 @@ jobs:
           node tests/upstream-134-integration.test.js
           node tests/upstream-135-integration.test.js
           node tests/upstream-135-ui-integration.test.js
+          node tests/glass-parity.test.js
           node <<'NODE'
           const i = require('./Info.json');
           if (i.ghRepo !== 'olivergiangvu/iina-episode-info-plus' ||

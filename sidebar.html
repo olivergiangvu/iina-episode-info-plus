@@ -188,16 +188,33 @@
   /* Episode Info Plus beta.3 — contrast tokens for native IINA Light/Dark.
      Specific rules replace the first beta's generic white-text overrides.
      All original dark appearances and settings keys remain untouched. */
-  :root { color-scheme: light dark; }
+  /* Shared Plus glass palette — semantic colors rather than opacity on content.
+     This matches Trakt+ and keeps native IINA's glass window visible. */
+  :root {
+    color-scheme: light dark;
+    --plus-glass-panel:rgba(16,22,32,.14);
+    --plus-glass-border:rgba(255,255,255,.16);
+    --plus-glass-primary:#e9edf3;
+    --plus-glass-secondary:rgba(233,237,243,.76);
+    --plus-glass-blur:14px;
+  }
   @media (prefers-color-scheme: dark) {
     body { color:#e9edf3; background:rgba(12,15,21,.26); }
   }
   @media (prefers-color-scheme: light) {
+    :root {
+      --plus-glass-panel:rgba(248,250,253,.16);
+      --plus-glass-border:rgba(34,49,70,.15);
+      --plus-glass-primary:#19283a;
+      --plus-glass-secondary:#40546d;
+    }
     body {
       --ep-text:#19283a; --ep-title:#142134; --ep-muted:#46576b;
       --ep-subtle:#53647a; --ep-border:rgba(35,52,75,.19);
       --ep-surface:rgba(34,49,70,.06); --ep-red:#ac302a;
-      color:var(--ep-text); background:rgba(248,249,252,.96);
+      /* IINA hosts the native macOS sidebar material. A .96 white layer
+         covered it; use the same transparent canvas as Trakt+ instead. */
+      color:var(--ep-text); background:transparent;
     }
     body, body input, body select, body textarea, body button { color:var(--ep-text); }
     /* Common card, dividers and metadata */
@@ -341,6 +358,15 @@
   @media (prefers-contrast: more) {
     body { background:Canvas !important; color:CanvasText !important; }
     button, input { border-width:1.5px !important; }
+  }
+  /* Shared with Trakt+: translucent component surfaces, opaque text. */
+  body #ov-status-box, body .op-wrap {
+    border-color:var(--plus-glass-border);
+  }
+  @media(prefers-color-scheme:light) {
+    body #ov-status-box, body .op-wrap {
+      background-color:var(--plus-glass-panel) !important;
+    }
   }
   /* Preserve existing adaptive Light/Dark styling for new controls. */
   #width-slider {accent-color:#d84334;}

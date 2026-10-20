@@ -201,8 +201,8 @@ const playerHints={
 const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,"../Info.json"),"utf8"));
 assert.equal(manifest.identifier,"io.github.olivergiangvu.iinaepisodeinfoplus");
 assert.equal(manifest.ghRepo,"olivergiangvu/iina-episode-info-plus");
-assert.equal(manifest.ghVersion,14);
-assert.equal(manifest.version,"1.3.2");
+assert.equal(manifest.ghVersion,15);
+assert.equal(manifest.version,"1.3.3-beta.1");
 // Contract test for the actual IINA HTTP bridge: numeric query values are
 // encoded into strings in the URL, never passed as raw numbers in params.
 const bridge=require("../episode-plus-http.js");
