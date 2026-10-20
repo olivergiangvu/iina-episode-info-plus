@@ -3,8 +3,8 @@ const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("n
 const overlay=fs.readFileSync(path.resolve(__dirname,"../overlay.html"),"utf8");
 const sidebar=fs.readFileSync(path.resolve(__dirname,"../sidebar.html"),"utf8");
 const info=require("../Info.json");
-assert.equal(info.version,"1.3.3-beta.2");
-assert.equal(info.ghVersion,16);
+assert.equal(info.version,"1.3.3-beta.3");
+assert.equal(info.ghVersion,17);
 for(const fragment of [
  "--plus-glass-panel:rgba(16,22,32,.14)","--plus-glass-border:rgba(255,255,255,.16)",
  "--plus-glass-primary:#e9edf3","--plus-glass-secondary:rgba(233,237,243,.76)",
@@ -47,4 +47,18 @@ assert(overlay.includes("display:none !important;")&&overlay.includes("color:Can
 assert(overlay.includes('id="cast"')&&overlay.includes('id="next"'));
 assert(overlay.includes("#wrap[data-theme=\"glass\"] #art::before"),
  "Frosted/Colorful poster blur must remain intact");
-console.log("Glass Clear light readability, WCAG worst-case contrast "+contrast.toFixed(2)+":1 PASS");
+// Light typography should be neutral and opaque: do not dim the entire
+// sidebar to compensate for white video. Preserve original Dark selectors.
+assert(sidebar.includes('class="ep-headline"'),"Inline top labels should have semantic styling");
+assert(sidebar.includes('class="ep-helper"'),"Lookup descriptions should be independently styled");
+assert(sidebar.includes('--ep-ink:#1f2023'),"Light ink should match Trakt+ neutral near-black");
+assert(sidebar.includes('color:var(--ep-ink) !important'),"Primary light copy must remain opaque");
+assert(sidebar.includes('color:var(--ep-copy) !important'),"Secondary light copy must remain opaque");
+assert(sidebar.includes('body #os-login-form span[style*="color:rgba"]'),
+ "Light sign-in captions must override legacy white inline text");
+assert(sidebar.includes('body #epplus-metadata-diagnostics summary'),
+ "Diagnostics summary must not remain low-contrast");
+assert(sidebar.includes('background:transparent'),
+ "IINA native glass translucency should remain enabled");
+console.log("Episode Info Light sidebar typography and Glass Clear contrast "+
+ contrast.toFixed(2)+":1 PASS");
