@@ -2,63 +2,53 @@
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
 const overlay=fs.readFileSync(path.resolve(__dirname,"../overlay.html"),"utf8");
 const sidebar=fs.readFileSync(path.resolve(__dirname,"../sidebar.html"),"utf8");
-const info=require("../Info.json");
-assert.equal(info.version,"1.3.3-beta.3");
-assert.equal(info.ghVersion,17);
+const manifest=require("../Info.json");
+assert.equal(manifest.version,"1.3.3-beta.4");
+assert.equal(manifest.ghVersion,18);
+// Native translucent sidebar + semantic Trakt+ ink remain untouched.
+for(const token of ["--ep-ink:#1f2023","--ep-muted:#2c3d52",
+  "--plus-glass-panel:rgba(248,250,253,.16)"])
+ assert(sidebar.includes(token),"Missing existing sidebar style: "+token);
+assert(sidebar.includes("color:var(--ep-text); background:transparent"));
+const mark="/* Episode Info Plus: macOS Light and Dark use DIFFERENT glass materials.";
+const begin=overlay.indexOf(mark);
+const end=overlay.indexOf("  @media(prefers-contrast:more)",begin);
+assert(begin>0&&end>begin,"Missing isolated Light Glass media CSS");
+const light=overlay.slice(begin,end);
+const dark=overlay.slice(0,begin);
+assert(light.includes("@media (prefers-color-scheme: light)"),
+ "Light material must be OS-controlled");
+assert(!dark.includes("opacity:clamp(.68,var(--bg-opacity),.92)"),
+ "Do not modify Dark Mode glass opacity");
 for(const fragment of [
- "--plus-glass-panel:rgba(16,22,32,.14)","--plus-glass-border:rgba(255,255,255,.16)",
- "--plus-glass-primary:#e9edf3","--plus-glass-secondary:rgba(233,237,243,.76)",
- "--plus-glass-blur:14px","--plus-glass-panel:rgba(248,250,253,.16)",
- "--plus-glass-border:rgba(34,49,70,.15)","--plus-glass-primary:#19283a",
- "--plus-glass-secondary:#40546d"
-])assert(sidebar.includes(fragment),"Shared semantic glass palette missing "+fragment);
-assert(sidebar.includes("color:var(--ep-text); background:transparent"),
- "Native sidebar transparency must remain");
-assert(sidebar.includes("--ep-muted:#2c3d52"),"Light sidebar secondary text requires sufficient contrast");
-const c=overlay.indexOf('/* In Light Mode a translucent WHITE Clear card');
-const e=overlay.indexOf('#wrap:not([data-theme="glass"]) .person b',c);
-assert(c>0&&e>c);
-const clear=overlay.slice(c,e);
-for(const rule of [
- "background:transparent","background:rgba(10,16,24,.84)",
- "opacity:clamp(.72,var(--bg-opacity),1)","color:#f9fbff",
- "color:rgba(255,255,255,.94)","color:#ffd25b","text-shadow:0 1px 2px"
-])assert(clear.includes(rule),"Glass Clear loses readability rule: "+rule);
-assert(!clear.includes("rgba(248,251,253"),
- "Smoked glass must not include former white haze");
-assert(!clear.includes("color:#142132"),"Former low contrast dark text must not return");
-assert(clear.includes(' #card::after {\n      display:none;'),
- "Clear must not add a bright specular layer that lowers text contrast");
-// WCAG worst case: a totally white video frame under the guaranteed minimum
-// smoked alpha (0.84*.68); white title must remain readable at >=4.5:1.
-const alpha=.84*.72;
-const bg=[10,16,24].map(c=>Math.round(c*alpha+255*(1-alpha)));
-const srgb=c=>{let s=c/255;return s<=.04045?s/12.92:Math.pow((s+.055)/1.055,2.4)};
-const luminance=rgb=>.2126*srgb(rgb[0])+.7152*srgb(rgb[1])+.0722*srgb(rgb[2]);
-const fg=[249,251,255],contrast=(luminance(fg)+.05)/(luminance(bg)+.05);
-const secondary=bg.map(c=>Math.round(255*.94+c*.06));
-const secondaryContrast=(luminance(secondary)+.05)/(luminance(bg)+.05);
-assert(secondaryContrast>=4.5,
- "Secondary text (Cast, synopsis and Up Next) must also meet WCAG AA: "+
- secondaryContrast.toFixed(2));
-assert(contrast>=4.5,"Smoked glass should pass AA on a pure white video: "+contrast.toFixed(2));
-assert(overlay.includes("display:none !important;")&&overlay.includes("color:CanvasText !important;"),
- "High-contrast accessibility must bypass decorative glass tints");
+ "background:rgb(243,247,252)",
+ "opacity:clamp(.68,var(--bg-opacity),.92)",
+ "color:#19232f",
+ "color:#293749",
+ "opacity:1",
+ "background:rgba(255,255,255,.28)",
+ 'data-glass="clear"',
+ 'data-glass="colorful"'
+])assert(light.includes(fragment),"Missing new Light Glass CSS: "+fragment);
+assert(!light.includes("background:rgba(10,16,24,.84)"),
+ "Light mode must not inherit the prior Smoked Glass override");
+assert(!light.includes("color:#f9fbff"),
+ "Light Mode must not duplicate Dark Mode white typography");
+assert(dark.includes("background:rgba(12,14,20,0.84); opacity:var(--bg-opacity)"),
+ "Original dark frosted opacity must remain unchanged");
+assert(dark.includes("color:rgba(255,255,255,.94)"),
+ "Original dark synopsis remains near-white");
 assert(overlay.includes('id="cast"')&&overlay.includes('id="next"'));
 assert(overlay.includes("#wrap[data-theme=\"glass\"] #art::before"),
- "Frosted/Colorful poster blur must remain intact");
-// Light typography should be neutral and opaque: do not dim the entire
-// sidebar to compensate for white video. Preserve original Dark selectors.
-assert(sidebar.includes('class="ep-headline"'),"Inline top labels should have semantic styling");
-assert(sidebar.includes('class="ep-helper"'),"Lookup descriptions should be independently styled");
-assert(sidebar.includes('--ep-ink:#1f2023'),"Light ink should match Trakt+ neutral near-black");
-assert(sidebar.includes('color:var(--ep-ink) !important'),"Primary light copy must remain opaque");
-assert(sidebar.includes('color:var(--ep-copy) !important'),"Secondary light copy must remain opaque");
-assert(sidebar.includes('body #os-login-form span[style*="color:rgba"]'),
- "Light sign-in captions must override legacy white inline text");
-assert(sidebar.includes('body #epplus-metadata-diagnostics summary'),
- "Diagnostics summary must not remain low-contrast");
-assert(sidebar.includes('background:transparent'),
- "IINA native glass translucency should remain enabled");
-console.log("Episode Info Light sidebar typography and Glass Clear contrast "+
- contrast.toFixed(2)+":1 PASS");
+ "Poster blur must remain enabled");
+assert(overlay.includes("prefers-contrast:more"));
+// WCAG AA against worst-case absolute-black video under min-alpha Light glass.
+const bg=[243,247,252].map(x=>Math.round(x*.68));
+const lum=rgb=>rgb.map(v=>{const x=v/255;return x<=.04045?x/12.92:((x+.055)/1.055)**2.4})
+.reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
+const ratio=(a,b)=>(Math.max(lum(a),lum(b))+.05)/(Math.min(lum(a),lum(b))+.05);
+const primary=ratio([25,35,47],bg),secondary=ratio([41,55,73],bg);
+assert(primary>=4.5&&secondary>=4.5,
+ "Light glass must protect both heading and metadata even on black video");
+console.log("Distinct Light/Dark Glass, poster/Cast/Up Next and black-frame AA contrast "+
+ primary.toFixed(2)+"/"+secondary.toFixed(2)+" PASS");

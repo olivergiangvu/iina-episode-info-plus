@@ -254,71 +254,83 @@
     .sn,.et,.mt,.ov { color:CanvasText !important; }
   }
 
-  /* Episode Info Plus Light/Dark compatibility with opt-in Glass. */
-  @media (prefers-color-scheme:light) {
+  /* Episode Info Plus: macOS Light and Dark use DIFFERENT glass materials.
+     Dark inherits its existing smoked-black card & white text unchanged.
+     Light uses a bright, translucent surface and opaque neutral dark text
+     (the same semantic approach as the Light sidebar / Trakt+).
+     The overlay is a separate IINA WebView and cannot sample video luminance;
+     protect readability on a near-black frame with a minimum light tint. */
+  @media (prefers-color-scheme: light) {
     #wrap[data-theme="glass"] #card {
-      background:transparent;border-color:rgba(255,255,255,.22);
-    }
-    /* Use a dark fallback behind the poster, not a dark layer covering it. */
-    /* Frosted and Colorful retain the same dark-on-poster glass recipe as
-       Dark Mode; the palette flips only for the explicitly Clear variant. */
-    #wrap[data-theme="glass"] #art {background:rgba(12,14,20,.90);}
-    #wrap[data-theme="glass"] .et,#wrap[data-theme="glass"] .person b {color:#fff;}
-    #wrap[data-theme="glass"] .sn {color:rgba(255,255,255,.84);}
-    #wrap[data-theme="glass"] .mt,#wrap[data-theme="glass"] .ov,
-    #wrap[data-theme="glass"] .person i,#wrap[data-theme="glass"] .next,
-    #wrap[data-theme="glass"] .next .lbl {color:rgba(255,255,255,.90);}
-    #wrap[data-theme="glass"] .rat {color:#f5c518;}
-    /* In Light Mode a translucent WHITE Clear card produced dark text over
-       an unpredictable grey/video luminance. Video pixels cannot be sampled
-       by the separate IINA overlay WebView, so invert the MATERIAL, not the
-       text. A neutral dark smoked glass works in both macOS appearances.
-       At the minimum Shade threshold .72, the .84-black tint produces
-       >=4.5:1 white text even above an entirely white frame. */
-    #wrap[data-theme="glass"][data-glass="clear"] #card {
       background:transparent;
-      border-color:rgba(255,255,255,.24);
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.25),
-        0 20px 54px rgba(0,0,0,.34);
+      border:1px solid rgba(36,50,68,.22);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.76),
+                 0 20px 56px rgba(25,35,50,.22);
     }
+    #wrap[data-theme="glass"] #art { background:rgba(243,247,252,.80); }
+    #wrap[data-theme="glass"] #art::before {
+      -webkit-filter:blur(40px) saturate(125%) brightness(108%);
+      filter:blur(40px) saturate(125%) brightness(108%);
+    }
+    #wrap[data-theme="glass"][data-glass="colorful"] #art::before {
+      -webkit-filter:blur(34px) saturate(168%) brightness(114%);
+      filter:blur(34px) saturate(168%) brightness(114%);
+    }
+    /* Keep shade on BACKGROUND only. All children remain fully opaque.
+       At 0.68 light tint, #293749 secondary text has >= 5:1 contrast
+       against a worst-case pure-black frame, without a white opaque card. */
+    #wrap[data-theme="glass"] #card::before,
+    #wrap[data-theme="glass"][data-glass="colorful"] #card::before,
     #wrap[data-theme="glass"][data-glass="clear"] #card::before {
       display:block;
-      background:rgba(10,16,24,.84);
-      opacity:.72; /* for older WebKit without clamp() */
-      opacity:clamp(.72,var(--bg-opacity),1);
+      background:rgb(243,247,252);
+      opacity:.72; /* old WebKit fallback */
+      opacity:clamp(.68,var(--bg-opacity),.92);
     }
-    /* Clear has no pale specular shine: even a 10% white sheen above the
-       title can undo WCAG contrast on bright video. Frosted/Colorful keep it. */
+    #wrap[data-theme="glass"] #card::after {
+      display:block;
+      background:linear-gradient(140deg,
+        rgba(255,255,255,.16) 0%,transparent 58%);
+    }
     #wrap[data-theme="glass"][data-glass="clear"] #card::after {
-      display:none;
+      display:none; /* keep Clear neutral; no white specular film */
     }
-    #wrap[data-theme="glass"][data-glass="clear"] #text {
-      text-shadow:0 1px 2px rgba(0,0,0,.44);
+    #wrap[data-theme="glass"] #text {
+      text-shadow:0 1px 0 rgba(255,255,255,.20);
     }
-    #wrap[data-theme="glass"][data-glass="clear"] .et,
-    #wrap[data-theme="glass"][data-glass="clear"] .person b {color:#f9fbff;}
-    #wrap[data-theme="glass"][data-glass="clear"] .sn,
-    #wrap[data-theme="glass"][data-glass="clear"] .mt,
-    #wrap[data-theme="glass"][data-glass="clear"] .ov,
-    #wrap[data-theme="glass"][data-glass="clear"] .person i,
-    #wrap[data-theme="glass"][data-glass="clear"] .next,
-    #wrap[data-theme="glass"][data-glass="clear"] .next .lbl {
-      color:rgba(255,255,255,.94);
+    #wrap[data-theme="glass"] .et,
+    #wrap[data-theme="glass"] .person b {
+      color:#19232f;
+      font-weight:700;
     }
-    #wrap[data-theme="glass"][data-glass="clear"] .mt span+span::before {
-      color:rgba(255,255,255,.72);
+    #wrap[data-theme="glass"] .sn,
+    #wrap[data-theme="glass"] .mt,
+    #wrap[data-theme="glass"] .ov,
+    #wrap[data-theme="glass"] .person i,
+    #wrap[data-theme="glass"] .next,
+    #wrap[data-theme="glass"] .next .lbl {
+      color:#293749;
+      opacity:1;
     }
-    #wrap[data-theme="glass"][data-glass="clear"] .rat {color:#ffd25b;}
-    #wrap[data-theme="glass"][data-glass="clear"] .next {
-      background:rgba(255,255,255,.12);
-      border-color:rgba(255,255,255,.24);
+    #wrap[data-theme="glass"] .mt span+span::before {
+      color:#46566a;
     }
-    #wrap[data-theme="glass"][data-glass="clear"] .person img {
-      box-shadow:0 0 0 1px rgba(255,255,255,.38);
+    #wrap[data-theme="glass"] .rat {color:#825300;}
+    #wrap[data-theme="glass"] .next {
+      color:#243449;
+      background:rgba(255,255,255,.28);
+      border-color:rgba(36,50,68,.22);
+    }
+    #wrap[data-theme="glass"] .next .lbl {color:#33445a;}
+    #wrap[data-theme="glass"] .person img {
+      box-shadow:0 0 0 1px rgba(36,50,68,.24);
     }
     #wrap:not([data-theme="glass"]) .person b {color:#142132;}
     #wrap:not([data-theme="glass"]) .person i {color:#45576b;}
-    #wrap:not([data-theme="glass"]) .next {color:#344559;background:rgba(21,35,53,.08);border-color:rgba(21,35,53,.15);}
+    #wrap:not([data-theme="glass"]) .next {
+      color:#344559;background:rgba(21,35,53,.08);
+      border-color:rgba(21,35,53,.15);
+    }
     #wrap:not([data-theme="glass"]) .next .lbl {color:#53667e;}
   }
   @media(prefers-contrast:more) {

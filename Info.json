@@ -1,7 +1,7 @@
 {
   "name": "Episode Info Plus",
   "identifier": "io.github.olivergiangvu.iinaepisodeinfoplus",
-  "version": "1.3.3-beta.3",
+  "version": "1.3.3-beta.4",
   "author": {
     "name": "Oliver Giang Vu (upstream Zain Imam)",
     "url": "https://github.com/olivergiangvu"
@@ -36,5 +36,5 @@
     "name": "Episode Info+"
   },
   "ghRepo": "olivergiangvu/iina-episode-info-plus",
-  "ghVersion": 17
+  "ghVersion": 18
 }
