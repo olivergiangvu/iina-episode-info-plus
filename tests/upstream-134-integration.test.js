@@ -61,7 +61,9 @@ async function run(){
   epinfo_tmdb_key:"local-secret",epinfo_overlay_theme:"poster",
   epinfo_skip_enabled:"true"
  };
+ let extraSettingsSent=0;
  const messages={},sender=vm.createContext({
+  sendCardSettings:function(){extraSettingsSent++;},
   localStorage:{getItem:k=>Object.hasOwn(saved,k)?saved[k]:null},
   iina:{onMessage:(type,handler)=>messages[type]=handler,
     postMessage:function(type,data){(messages.sent||(messages.sent=[])).push({type,data});}}
@@ -69,6 +71,7 @@ async function run(){
  vm.runInContext(realResend,sender);
  saved.epinfo_overlay_enabled="true"; // user changes after IINA started
  messages.resendSettings();
+ assert.equal(extraSettingsSent,1,"Recovery includes new appearance settings");
  const sent=messages.sent;
  assert(sent.some(x=>x.type==="setOverlayEnabled"&&x.data.enabled===true));
  assert(sent.some(x=>x.type==="setOverlayTheme"&&x.data.value==="poster"));
