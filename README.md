@@ -8,6 +8,8 @@ Maintained as an independent fork of [Zain Imam's Episode Info](https://github.c
 
 ## Episode Info Plus features
 
+**Current Stable: v1.3.3** — promoted from the Mac-tested beta.9. Light/Dark Glass and sidebar are visually aligned; no functional changes to matching, metadata, subtitles or Skip Intro since beta.9. See [v1.3.3 release notes](docs/releases/v1.3.3.md). Previous Stable v1.3.2 remains for rollback.
+
 **v1.3.3-beta.9 — native OSD-style text repair:** Immediately removes all beta.8 light text strokes and four-direction white edging. Light Glass now uses crisp, unoutlined near-black typography over one evenly translucent neutral-grey material, scaled with Shade (about 59% at Shade 57%) to protect contrast on darker video. No central scrim, poster/color changes, Cast/Up Next API changes or per-video sampling. Dark Mode and native IINA sidebar are unchanged. This is an approximation of native OSD; HTML/WebView cannot guarantee the exact native video-backdrop blur. Mac visual verification is required before Stable.
 
 
@@ -55,9 +57,9 @@ Open **IINA → Settings/Preferences → Plugins → Install from GitHub** and e
 https://github.com/olivergiangvu/iina-episode-info-plus
 ```
 
-Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **1.3.2** (GitHub Latest). The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
+Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **1.3.3** (GitHub Latest). The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
 
-GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (currently **14** for v1.3.2 Stable). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
+GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (currently **24** for v1.3.3 Stable). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
 
 ## Preserving settings
 
