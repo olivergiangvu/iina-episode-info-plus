@@ -32,6 +32,7 @@ jobs:
           node --check episode-plus-aios.js
           node tests/episode-plus-identity.test.js
           node tests/upstream-134-integration.test.js
+          node tests/upstream-135-integration.test.js
           node <<'NODE'
           const i = require('./Info.json');
           if (i.ghRepo !== 'olivergiangvu/iina-episode-info-plus' ||
@@ -67,23 +68,25 @@ jobs:
               --prerelease --latest=false
           else
             cat > /tmp/notes.md <<'NOTES'
-          Episode Info Plus v0.1.2 — Stable, promoted from v0.1.2-beta.1 after successful real-world IINA/macOS validation.
+          Episode Info Plus v1.3.1 — Stable. Selective upstream v1.3.4 and v1.3.5 integration.
 
-          What's new:
-          - Recognize AIOStreams HLS title fragments such as index.m3u8#aios_title=OK! Let's Get Divorced · S01E10 · A Second Chance At Love.
-          - Parse title, season, episode and optional episode title from URL fragments or IINA playback labels without trusting generic index.m3u8 as a show name.
-          - Verify candidate metadata via the existing TMDB-first pipeline (TVmaze remains a fallback); distinguish provisional identity from externally verified metadata.
-          - Fail closed on conflicting or duplicate AIOStreams annotations rather than matching an unrelated show.
-          - Preserve the existing macOS Light/Dark/PiP interface, subtitle providers and skip-intro support.
+          Improvements:
+          - Recover current settings when the IINA sidebar sends startup preferences before the plugin registers listeners.
+          - Treat structured TMDB candidate HTTP 404 as a missing candidate, not a failed metadata service.
+          - Automatically offer TMDB search results for uncertain identities without overwriting typed queries or adding entries to Recent Searches.
+          - Following a user's explicit selection of a TV show, navigate to the season/episode inferred from the playback file. Never use the hint to identify the show automatically.
+          - Verify "Show - Episode Title" only when TMDB has one exact episode of a sufficiently known show with a compatible runtime.
+          - Resolve high absolute anime episode numbers only for Japanese animation when unambiguous across known season lengths.
+          - Update Skip Intro's TheIntroDB query to the upstream v4 API endpoint.
 
-          Validation:
-          - User-confirmed AIOStreams S01E10 matched the correct series and episode title, poster, date, synopsis and TMDB verified label in IINA.
-          - CI passes parser integration, negative/conflict regressions, JavaScript syntax, manifest and .iinaplgz archive validation.
-          - No new plugin permissions, storage changes or Trakt+ changes.
-          - Same plugin identifier and settings keys; ghVersion increased to 10 for automatic updates.
+          Compatibility and safety:
+          - Existing TMDB primary, TVmaze fallback and HTTP bridge normalization remain intact.
+          - Preserve Comet, MediaFusion/TorBox and AIOStreams HLS title matching, verified/provisional identities, diagnostics, subtitles, Light/Dark overlay and PiP.
+          - No additional permissions, plugin identifier or storage migrations; ghVersion 12.
+          - Glass theme, cast and Up Next are intentionally held for separate UI review due to the fork's customized adaptive appearance.
+          - CI tests exercise upstream matching extensions and false-positive guards; newly merged UI flows have not yet been independently confirmed on a user's Mac.
 
-          Rollback: v0.1.1 and v0.1.0 remain available in GitHub Releases.
-          This independent fork credits Zain Imam and retains the upstream MIT License.
+          Previous Stable v0.1.2 remains available for rollback. Independent MIT-licensed fork of Zain Imam's Episode Info.
 
           NOTES
             gh release create "$TAG" "dist/Episode-Info-Plus-$VERSION.iinaplgz" \
