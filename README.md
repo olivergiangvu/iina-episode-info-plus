@@ -8,6 +8,10 @@ Maintained as an independent fork of [Zain Imam's Episode Info](https://github.c
 
 ## Episode Info Plus features
 
+**v1.3.3-beta.7 (uniform Light Glass):** Removes the 52%-white blurred `#text::before` cushion behind the overlay's center column. That extra layer was responsible for the visibly opaque/milky patch compared with Dark Mode. Light now has one continuous low-alpha background film (unchanged Shade mapping from beta.5), no text-specific background or blur, and retains the high-contrast opaque micro-typography introduced in beta.6. Dark Mode, sidebar styling, Glass variants, metadata, Trakt+ and stored preferences are unchanged. Visual checking against both a bright and dark IINA scene is required before Stable.
+
+
+
 **Glass visual update (beta.5):** Dark Mode remains completely unchanged. Light Mode now uses a low-alpha pearl tint (~14% at Shade 57%) across the full card and a softly blurred, localized 52% backing only beneath the text column, rather than the prior 68% opaque-looking global overlay. Text, Cast and Up Next remain fully opaque with dark neutral typography. The sidebar and metadata/recognition code are unchanged. Light Mode rendering must be checked on both dark and bright video before Stable promotion.
 
 **v1.3.3-beta.6 (Light Glass microtype + sidebar rating):** Keeps beta.5 background, Shade mapping and approved Dark Mode intact. In Light Glass only, strengthens metadata, synopsis, cast roles and Up Next microtext without dimming text or adding a white halo, while retaining full video translucency. Light native-glass sidebar gets a richer dark amber rating, stronger 'Found automatically' and 'Not right? Search' text and a deep-green TMDB/TVmaze verified label (including the provisional warning state). No changes to the matching engine, API requests, Glass background opacity, Trakt+ or stored settings.

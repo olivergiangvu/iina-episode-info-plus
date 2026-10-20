@@ -4,8 +4,8 @@ const fs=require("node:fs"),vm=require("node:vm"),path=require("node:path");
 const overlay=fs.readFileSync(path.resolve(__dirname,"../overlay.html"),"utf8");
 const sidebar=fs.readFileSync(path.resolve(__dirname,"../sidebar.html"),"utf8");
 const info=require("../Info.json");
-assert.equal(info.version,"1.3.3-beta.6");
-assert.equal(info.ghVersion,20);
+assert.equal(info.version,"1.3.3-beta.7");
+assert.equal(info.ghVersion,21);
 assert(sidebar.includes("--ep-ink:#1f2023"));
 assert(sidebar.includes("color:var(--ep-text); background:transparent"));
 const mark="/* Episode Info Plus: macOS Light and Dark use DIFFERENT glass materials.";
@@ -20,9 +20,9 @@ assert(!light.includes("opacity:clamp(.68,var(--bg-opacity),.92)"),
  "Regressed global white haze is forbidden");
 for(const token of ["background:rgb(244,248,252)",
   "opacity:var(--light-glass-opacity,.16)",
-  "#wrap[data-theme=\"glass\"] #text::before",
-  "background:rgba(245,249,253,.52)",
-  "filter:blur(11px)",
+  '#wrap[data-theme="glass"] #text::before',
+  "content:none",
+  "display:none",
   "color:#17202b","color:#1a2531",
   "background:rgba(243,247,252,.10)",
   "display:none","data-glass=\"clear\""])
@@ -54,8 +54,24 @@ ctx.applyBackgroundShade(.02);
 assert.equal(vars["--light-glass-opacity"],.07,"Minimum neutral tint");
 assert(overlay.includes('id="cast"')&&overlay.includes('id="next"'));
 assert(overlay.includes("prefers-contrast:more"));
-// Local cushioning intentionally softens only the text zone, not the entire
-// glass panel; contrast is scene-dependent and requires macOS visual testing.
+// Light uses a single homogeneous card-wide film; content remains opaque.
+// No text-only white background (the visible central haze) may return.
+assert(!light.includes("background:rgba(245,249,253,.52)"),
+ "Former 52% text scrim was the opaque patch in the center of the card");
+assert(!light.includes("inset:-8px -12px") && !light.includes("filter:blur(11px)"),
+ "No separately blurred rectangle behind the title, synopsis and cast");
+assert(light.includes(' #text::before {\n      content:none;\n      display:none;'),
+ "The text-column pseudo element must be disabled only in Light Mode");
+assert(light.includes("opacity:var(--light-glass-opacity,.16)"),
+ "Uniform card-wide Light glass opacity must be unchanged");
+assert(dark.includes("background:rgba(12,14,20,0.84); opacity:var(--bg-opacity)"),
+ "Dark Mode background is approved and must remain unchanged");
+assert(!light.includes("position:relative;\n      isolation:isolate;\n      z-index:0;"),
+ "Remove isolated stacking context from the former text scrim");
+assert(light.includes("/* beta.6: micro-typography"),
+ "Preserve microtext readability and color hierarchy after removing scrim");
+// Contrast now depends on the video frame beneath the uniform translucent
+// Light panel: CI cannot guarantee contrast without screen capture in IINA.
 // The previous low-contrast inline verification styles must have a Light-only
 // override. Do not change the source hues for the already-approved Dark Mode.
 assert(sidebar.includes('body #s-meta .rat {\n      color:#916208 !important'),
@@ -84,4 +100,4 @@ assert(!dark.includes("/* beta.6: micro-typography"),"Dark styling must not chan
 assert(!light.includes("background:rgba(250,251,253,var(--bg-opacity))"),
  "No new opaque full-Glass background allowed");
 
-console.log("beta.6 Light Glass microtype, amber rating, verified-status colors and Dark isolation: PASS");
+console.log("beta.7 uniform Light Glass (central haze removed), microtype, rating and untouched Dark baseline PASS");

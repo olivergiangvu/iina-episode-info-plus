@@ -294,26 +294,17 @@
     #wrap[data-theme="glass"][data-glass="clear"] #card::after {
       display:none;
     }
-    /* Only the text COLUMN gets a soft local readability cushion.
-       The rest of the card (poster and surrounding space) stays transparent,
-       allowing the video to show through. The softened boundary avoids a
-       visible opaque rectangular card inside the glass. */
+    /* beta.7: no local white cushion. It created a visible opaque rectangle
+       centered behind the episode title/synopsis/Cast. All content now sits
+       above ONE uniformly translucent card-wide light-glass film, exactly
+       like the Dark Mode layer structure, with independent light typography.
+       Do not reintroduce a separate text-zone background or filter. */
     #wrap[data-theme="glass"] #text {
-      position:relative;
-      isolation:isolate;
-      z-index:0;
-      text-shadow:0 1px 1px rgba(255,255,255,.45);
+      text-shadow:none;
     }
     #wrap[data-theme="glass"] #text::before {
-      content:"";
-      position:absolute;
-      inset:-8px -12px;
-      border-radius:13px;
-      z-index:-1;
-      background:rgba(245,249,253,.52);
-      -webkit-filter:blur(11px);
-      filter:blur(11px);
-      pointer-events:none;
+      content:none;
+      display:none;
     }
     #wrap[data-theme="glass"] .et,
     #wrap[data-theme="glass"] .person b {
