@@ -2,8 +2,8 @@
 const assert=require("node:assert/strict"),fs=require("node:fs"),vm=require("node:vm"),path=require("node:path");
 const code=fs.readFileSync(path.join(__dirname,"../main.js"),"utf8");
 const info=JSON.parse(fs.readFileSync(path.join(__dirname,"../Info.json"),"utf8"));
-assert.equal(info.version,"1.3.3-beta.4");
-assert.equal(info.ghVersion,18);
+assert.equal(info.version,"1.3.3-beta.5");
+assert.equal(info.ghVersion,19);
 assert.equal(info.identifier,"io.github.olivergiangvu.iinaepisodeinfoplus");
 assert(code.includes("https://api.theintrodb.org/v4/media?"),
  "TheIntroDB must use the upstream's current v4 endpoint");

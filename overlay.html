@@ -263,11 +263,14 @@
   @media (prefers-color-scheme: light) {
     #wrap[data-theme="glass"] #card {
       background:transparent;
-      border:1px solid rgba(36,50,68,.22);
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.76),
-                 0 20px 56px rgba(25,35,50,.22);
+      border:1px solid rgba(36,50,68,.20);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.35),
+                 0 17px 48px rgba(25,35,50,.20);
+      /* This may blur within the WebView, not across IINA's video layer. */
+      -webkit-backdrop-filter:blur(16px) saturate(115%);
+      backdrop-filter:blur(16px) saturate(115%);
     }
-    #wrap[data-theme="glass"] #art { background:rgba(243,247,252,.80); }
+    #wrap[data-theme="glass"] #art { background:rgba(243,247,252,.10); }
     #wrap[data-theme="glass"] #art::before {
       -webkit-filter:blur(40px) saturate(125%) brightness(108%);
       filter:blur(40px) saturate(125%) brightness(108%);
@@ -276,31 +279,45 @@
       -webkit-filter:blur(34px) saturate(168%) brightness(114%);
       filter:blur(34px) saturate(168%) brightness(114%);
     }
-    /* Keep shade on BACKGROUND only. All children remain fully opaque.
-       At 0.68 light tint, #293749 secondary text has >= 5:1 contrast
-       against a worst-case pure-black frame, without a white opaque card. */
+    /* LIGHT ONLY: native-style glass, ~14% light tint at Shade 57%.
+       Card shade is a translucent *background layer*, never an opacity
+       applied to content. Dedicated JS computes this for older WebKit. */
     #wrap[data-theme="glass"] #card::before,
     #wrap[data-theme="glass"][data-glass="colorful"] #card::before,
     #wrap[data-theme="glass"][data-glass="clear"] #card::before {
       display:block;
-      background:rgb(243,247,252);
-      opacity:.72; /* old WebKit fallback */
-      opacity:clamp(.68,var(--bg-opacity),.92);
+      background:rgb(244,248,252);
+      opacity:var(--light-glass-opacity,.16);
     }
-    #wrap[data-theme="glass"] #card::after {
-      display:block;
-      background:linear-gradient(140deg,
-        rgba(255,255,255,.16) 0%,transparent 58%);
-    }
+    /* The global white sheen was responsible for the milky appearance. */
+    #wrap[data-theme="glass"] #card::after,
     #wrap[data-theme="glass"][data-glass="clear"] #card::after {
-      display:none; /* keep Clear neutral; no white specular film */
+      display:none;
     }
+    /* Only the text COLUMN gets a soft local readability cushion.
+       The rest of the card (poster and surrounding space) stays transparent,
+       allowing the video to show through. The softened boundary avoids a
+       visible opaque rectangular card inside the glass. */
     #wrap[data-theme="glass"] #text {
-      text-shadow:0 1px 0 rgba(255,255,255,.20);
+      position:relative;
+      isolation:isolate;
+      z-index:0;
+      text-shadow:0 1px 1px rgba(255,255,255,.45);
+    }
+    #wrap[data-theme="glass"] #text::before {
+      content:"";
+      position:absolute;
+      inset:-8px -12px;
+      border-radius:13px;
+      z-index:-1;
+      background:rgba(245,249,253,.52);
+      -webkit-filter:blur(11px);
+      filter:blur(11px);
+      pointer-events:none;
     }
     #wrap[data-theme="glass"] .et,
     #wrap[data-theme="glass"] .person b {
-      color:#19232f;
+      color:#17202b;
       font-weight:700;
     }
     #wrap[data-theme="glass"] .sn,
@@ -317,7 +334,7 @@
     #wrap[data-theme="glass"]:not([data-glass="clear"]) .person i,
     #wrap[data-theme="glass"]:not([data-glass="clear"]) .next,
     #wrap[data-theme="glass"]:not([data-glass="clear"]) .next .lbl {
-      color:#293749;
+      color:#1a2531;
       opacity:1;
     }
     #wrap[data-theme="glass"] .mt span+span::before {
@@ -326,8 +343,8 @@
     #wrap[data-theme="glass"] .rat {color:#825300;}
     #wrap[data-theme="glass"] .next {
       color:#243449;
-      background:rgba(255,255,255,.28);
-      border-color:rgba(36,50,68,.22);
+      background:rgba(245,249,253,.48);
+      border-color:rgba(36,50,68,.20);
     }
     #wrap[data-theme="glass"] .next .lbl {color:#33445a;}
     #wrap[data-theme="glass"] .person img {
@@ -403,11 +420,23 @@ function applyVerticalPos(v) {
   }
 }
 
+// Dark uses the unmodified --bg-opacity variable. The separate Light
+// glass background uses a small scaled fraction of the same user Shade.
+// Avoid CSS calc multiplication: older IINA WebKit builds may ignore it.
+function applyBackgroundShade(value) {
+  var v=Number(value);
+  if (!Number.isFinite(v)) return;
+  v=Math.max(0,Math.min(1,v));
+  document.documentElement.style.setProperty("--bg-opacity",v);
+  document.documentElement.style.setProperty("--light-glass-opacity",
+    Math.max(.07,Math.min(.24,v*.24)));
+}
+
 // Episode data from main.js
 iina.onMessage("showData", function(d) {
   // Update background shade first
   if (typeof d.bgOpacity === "number") {
-    document.documentElement.style.setProperty("--bg-opacity", d.bgOpacity);
+    applyBackgroundShade(d.bgOpacity);
   }
 
   // Apply vertical position
@@ -468,7 +497,7 @@ iina.onMessage("showData", function(d) {
 // Live opacity from the sidebar
 iina.onMessage("setBgOpacity", function(d) {
   if (typeof d.value === "number") {
-    document.documentElement.style.setProperty("--bg-opacity", d.value);
+    applyBackgroundShade(d.value);
   }
 });
 

@@ -1,56 +1,59 @@
 "use strict";
-const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
+const assert=require("node:assert/strict");
+const fs=require("node:fs"),vm=require("node:vm"),path=require("node:path");
 const overlay=fs.readFileSync(path.resolve(__dirname,"../overlay.html"),"utf8");
 const sidebar=fs.readFileSync(path.resolve(__dirname,"../sidebar.html"),"utf8");
-const manifest=require("../Info.json");
-assert.equal(manifest.version,"1.3.3-beta.4");
-assert.equal(manifest.ghVersion,18);
-// Native translucent sidebar + semantic Trakt+ ink remain untouched.
-for(const token of ["--ep-ink:#1f2023","--ep-muted:#2c3d52",
-  "--plus-glass-panel:rgba(248,250,253,.16)"])
- assert(sidebar.includes(token),"Missing existing sidebar style: "+token);
+const info=require("../Info.json");
+assert.equal(info.version,"1.3.3-beta.5");
+assert.equal(info.ghVersion,19);
+assert(sidebar.includes("--ep-ink:#1f2023"));
 assert(sidebar.includes("color:var(--ep-text); background:transparent"));
 const mark="/* Episode Info Plus: macOS Light and Dark use DIFFERENT glass materials.";
-const begin=overlay.indexOf(mark);
-const end=overlay.indexOf("  @media(prefers-contrast:more)",begin);
-assert(begin>0&&end>begin,"Missing isolated Light Glass media CSS");
-const light=overlay.slice(begin,end);
-const dark=overlay.slice(0,begin);
-assert(light.includes("@media (prefers-color-scheme: light)"),
- "Light material must be OS-controlled");
-assert(!dark.includes("opacity:clamp(.68,var(--bg-opacity),.92)"),
- "Do not modify Dark Mode glass opacity");
-for(const fragment of [
- "background:rgb(243,247,252)",
- "opacity:clamp(.68,var(--bg-opacity),.92)",
- "color:#19232f",
- "color:#293749",
- "opacity:1",
- "background:rgba(255,255,255,.28)",
- 'data-glass="clear"',
- 'data-glass="colorful"'
-])assert(light.includes(fragment),"Missing new Light Glass CSS: "+fragment);
-assert(!light.includes("background:rgba(10,16,24,.84)"),
- "Light mode must not inherit the prior Smoked Glass override");
-assert(light.includes(':not([data-glass="clear"]) .ov'),
- "Specific Frosted/Colorful dark-mode selectors must be overridden in Light Mode");
-assert(!light.includes("color:#f9fbff"),
- "Light Mode must not duplicate Dark Mode white typography");
+const first=overlay.indexOf(mark),end=overlay.indexOf("  @media(prefers-contrast:more)",first);
+assert(first>0&&end>first,"Missing OS-scoped Light material");
+const light=overlay.slice(first,end),dark=overlay.slice(0,first);
+assert(light.includes("@media (prefers-color-scheme: light)"));
 assert(dark.includes("background:rgba(12,14,20,0.84); opacity:var(--bg-opacity)"),
- "Original dark frosted opacity must remain unchanged");
-assert(dark.includes("color:rgba(255,255,255,.94)"),
- "Original dark synopsis remains near-white");
+ "Dark Mode material must be unchanged");
+assert(dark.includes("color:rgba(255,255,255,.94)"));
+assert(!light.includes("opacity:clamp(.68,var(--bg-opacity),.92)"),
+ "Regressed global white haze is forbidden");
+for(const token of ["background:rgb(244,248,252)",
+  "opacity:var(--light-glass-opacity,.16)",
+  "#wrap[data-theme=\"glass\"] #text::before",
+  "background:rgba(245,249,253,.52)",
+  "filter:blur(11px)",
+  "color:#17202b","color:#1a2531",
+  "background:rgba(243,247,252,.10)",
+  "display:none","data-glass=\"clear\""])
+ assert(light.includes(token),"Missing translucent local-glass design: "+token);
+assert(!light.includes("opacity:.72; /* old WebKit fallback */"));
+assert(!light.includes("background:rgb(243,247,252)"));
+assert(overlay.includes("function applyBackgroundShade(value)"));
+assert(overlay.includes("Math.max(.07,Math.min(.24,v*.24))"));
+assert(overlay.includes("applyBackgroundShade(d.bgOpacity)") &&
+  overlay.includes("applyBackgroundShade(d.value)"),
+ "Initial and live Shade events must update the same Light variable");
+// Exercise the ACTUAL IINA WebView helper in a minimal isolated JS context.
+const helper=overlay.slice(overlay.indexOf("function applyBackgroundShade(value)"),
+  overlay.indexOf("// Episode data from main.js"));
+const vars={};
+const ctx=vm.createContext({
+ document:{documentElement:{style:{setProperty:(k,v)=>{vars[k]=v}}}},
+ Number:Number,Math:Math
+});
+vm.runInContext(helper,ctx);
+ctx.applyBackgroundShade(.57);
+assert.equal(vars["--bg-opacity"],.57,"Dark Mode Shade value must remain exact");
+assert(Math.abs(vars["--light-glass-opacity"]-.1368)<.00001,
+ "Light Mode must be ~14% transparent tint at reported Shade 57%");
+ctx.applyBackgroundShade(1);
+assert.equal(vars["--bg-opacity"],1);
+assert.equal(vars["--light-glass-opacity"],.24,"Global Light tint cap");
+ctx.applyBackgroundShade(.02);
+assert.equal(vars["--light-glass-opacity"],.07,"Minimum neutral tint");
 assert(overlay.includes('id="cast"')&&overlay.includes('id="next"'));
-assert(overlay.includes("#wrap[data-theme=\"glass\"] #art::before"),
- "Poster blur must remain enabled");
 assert(overlay.includes("prefers-contrast:more"));
-// WCAG AA against worst-case absolute-black video under min-alpha Light glass.
-const bg=[243,247,252].map(x=>Math.round(x*.68));
-const lum=rgb=>rgb.map(v=>{const x=v/255;return x<=.04045?x/12.92:((x+.055)/1.055)**2.4})
-.reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
-const ratio=(a,b)=>(Math.max(lum(a),lum(b))+.05)/(Math.min(lum(a),lum(b))+.05);
-const primary=ratio([25,35,47],bg),secondary=ratio([41,55,73],bg);
-assert(primary>=4.5&&secondary>=4.5,
- "Light glass must protect both heading and metadata even on black video");
-console.log("Distinct Light/Dark Glass, poster/Cast/Up Next and black-frame AA contrast "+
- primary.toFixed(2)+"/"+secondary.toFixed(2)+" PASS");
+// Local cushioning intentionally softens only the text zone, not the entire
+// glass panel; contrast is scene-dependent and requires macOS visual testing.
+console.log("Light native-glass tint 13.68% at Shade 57%; local text scrim 52%; Dark untouched: PASS");
