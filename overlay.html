@@ -105,6 +105,99 @@
   #wrap[data-theme="poster"] .mt { margin-bottom:11px; }
   #wrap[data-theme="poster"] .ov { -webkit-line-clamp:4; font-size:15px; line-height:1.55; }
 
+  /* Glass theme: floating card filled with the episode's own poster, blurred */
+  #wrap[data-theme="glass"] #card {
+    width:auto; max-width:76%; margin:0 auto;
+    border-radius:22px; padding:24px 28px; gap:28px;
+    flex-direction:row-reverse;
+    background:transparent; isolation:isolate;
+    border:1px solid rgba(255,255,255,0.2);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.32), 0 24px 70px rgba(0,0,0,0.42);
+  }
+  /* IINA's overlay can't blur the video behind it, so the frost comes from the poster; Clear has none */
+  #art { display:none; }
+  #wrap[data-theme="glass"] #art {
+    display:block; position:absolute; inset:0; border-radius:inherit; overflow:hidden; z-index:-2;
+  }
+  #wrap[data-theme="glass"][data-glass="clear"] #art { display:none; }
+  #wrap[data-theme="glass"] #art::before {
+    content:""; position:absolute; inset:-60px;
+    background:var(--art, none) center / cover no-repeat;
+    -webkit-filter:blur(40px) saturate(150%) brightness(78%); filter:blur(40px) saturate(150%) brightness(78%);
+  }
+  /* Colorful: brighter artwork under a lighter tint */
+  #wrap[data-theme="glass"][data-glass="colorful"] #art::before {
+    -webkit-filter:blur(34px) saturate(220%) brightness(92%); filter:blur(34px) saturate(220%) brightness(92%);
+  }
+  #wrap[data-theme="glass"][data-glass="colorful"] #card::before { background:rgba(12,14,20,0.62); }
+  /* Tint follows the Shade slider */
+  #wrap[data-theme="glass"] #card::before {
+    content:""; position:absolute; inset:0; border-radius:inherit; z-index:-1;
+    background:rgba(12,14,20,0.84); opacity:var(--bg-opacity);
+  }
+  #wrap[data-theme="glass"] #card::after {
+    content:""; position:absolute; inset:0; border-radius:inherit; z-index:-1;
+    background:linear-gradient(135deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.05) 38%, rgba(255,255,255,0) 62%);
+  }
+  #wrap[data-theme="glass"] #poster { width:15vw; max-width:170px; min-width:110px; }
+  #wrap[data-theme="glass"] #poster img {
+    border-radius:12px; opacity:1;
+    box-shadow:0 10px 34px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.16);
+  }
+  #wrap[data-theme="glass"] #text { text-shadow:0 1px 3px rgba(0,0,0,0.6); }
+  #wrap[data-theme="glass"] .sn { color:rgba(255,255,255,0.62); margin-bottom:8px; }
+  #wrap[data-theme="glass"] .et { font-size:30px; white-space:normal; margin-bottom:8px; }
+  #wrap[data-theme="glass"] .mt { color:rgba(255,255,255,0.74); margin-bottom:10px; }
+  #wrap[data-theme="glass"] .ov { color:rgba(255,255,255,0.84); -webkit-line-clamp:3; font-size:15px; line-height:1.55; }
+  /* Over a light poster the grey labels faded, so near-white text with a firmer shadow */
+  #wrap[data-theme="glass"]:not([data-glass="clear"]) #text { text-shadow:0 1px 3px rgba(0,0,0,0.75), 0 0 10px rgba(0,0,0,0.3); }
+  #wrap[data-theme="glass"]:not([data-glass="clear"]) .sn,
+  #wrap[data-theme="glass"]:not([data-glass="clear"]) .mt,
+  #wrap[data-theme="glass"]:not([data-glass="clear"]) .person i,
+  #wrap[data-theme="glass"]:not([data-glass="clear"]) .next .lbl { color:rgba(255,255,255,0.88); }
+  #wrap[data-theme="glass"]:not([data-glass="clear"]) .ov,
+  #wrap[data-theme="glass"]:not([data-glass="clear"]) .next { color:rgba(255,255,255,0.96); }
+
+  /* Cast and Up next; never on Compact */
+  #extra { display:none; margin-top:16px; }
+  #wrap[data-extra] #extra { display:block; }
+  #wrap[data-theme="compact"] #extra { display:none; }
+  /* One row of as many as fit; the rest wrap out of sight rather than squeeze */
+  .cast {
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+    grid-auto-rows:36px; row-gap:40px; column-gap:14px;
+    max-height:38px; padding:1px; overflow:hidden;
+  }
+  .person { display:flex; align-items:center; gap:9px; min-width:0; }
+  .person img {
+    width:34px; height:34px; border-radius:50%; object-fit:cover; flex-shrink:0;
+    box-shadow:0 0 0 1px rgba(255,255,255,0.35);
+  }
+  .person span { min-width:0; }
+  .person b, .person i {
+    display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .person b { font-size:12.5px; font-weight:600; color:#fff; }
+  .person i { font-style:normal; font-size:11.5px; color:rgba(255,255,255,0.62); }
+  .next {
+    display:inline-flex; align-items:center; gap:9px; margin-top:14px;
+    padding:6px 13px; border-radius:999px;
+    background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.16);
+    font-size:12.5px; color:rgba(255,255,255,0.88);
+  }
+  .next .lbl { font-size:10.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,0.56); }
+
+  /* Card width from the sidebar; unset keeps the theme's own */
+  #wrap[data-width] #card { width:var(--card-width); max-width:none; margin-left:auto; margin-right:auto; }
+  #wrap[data-width][data-theme="classic"] #card,
+  #wrap[data-width][data-theme="compact"] #card { border-radius:14px; }
+  #wrap[data-width][data-full] #card { border-radius:0; }
+  #wrap[data-width][data-full][data-theme="glass"] #card { border-left:0; border-right:0; }
+
+  /* Poster side from the sidebar; unset keeps the theme's own */
+  #wrap[data-poster="left"]:not([data-theme="compact"]) #card { flex-direction:row-reverse; }
+  #wrap[data-poster="right"]:not([data-theme="compact"]) #card { flex-direction:row; }
+
   /* Skip pill, independent of the info card */
   #skip-wrap {
     position:fixed; right:4vw; bottom:12vh;
@@ -160,17 +253,59 @@
     #card { background:Canvas !important; color:CanvasText !important; }
     .sn,.et,.mt,.ov { color:CanvasText !important; }
   }
+
+  /* Episode Info Plus Light/Dark compatibility with opt-in Glass. */
+  @media (prefers-color-scheme:light) {
+    #wrap[data-theme="glass"] #card {
+      background:transparent;border-color:rgba(255,255,255,.22);
+    }
+    /* Use a dark fallback behind the poster, not a dark layer covering it. */
+    #wrap[data-theme="glass"] #art {background:rgba(12,14,20,.90);}
+    #wrap[data-theme="glass"] .et,#wrap[data-theme="glass"] .person b {color:#fff;}
+    #wrap[data-theme="glass"] .sn {color:rgba(255,255,255,.84);}
+    #wrap[data-theme="glass"] .mt,#wrap[data-theme="glass"] .ov,
+    #wrap[data-theme="glass"] .person i,#wrap[data-theme="glass"] .next,
+    #wrap[data-theme="glass"] .next .lbl {color:rgba(255,255,255,.90);}
+    #wrap[data-theme="glass"] .rat {color:#f5c518;}
+    #wrap[data-theme="glass"][data-glass="clear"] #card {
+      background:rgba(250,251,253,var(--bg-opacity));border-color:rgba(21,35,53,.15);
+    }
+    #wrap[data-theme="glass"][data-glass="clear"] .et,
+    #wrap[data-theme="glass"][data-glass="clear"] .person b {color:#142132;}
+    #wrap[data-theme="glass"][data-glass="clear"] .sn,
+    #wrap[data-theme="glass"][data-glass="clear"] .mt,
+    #wrap[data-theme="glass"][data-glass="clear"] .ov,
+    #wrap[data-theme="glass"][data-glass="clear"] .person i,
+    #wrap[data-theme="glass"][data-glass="clear"] .next,
+    #wrap[data-theme="glass"][data-glass="clear"] .next .lbl {color:#344559;}
+    #wrap[data-theme="glass"][data-glass="clear"] .rat {color:#8b5a00;}
+    #wrap[data-theme="glass"][data-glass="clear"] #card::before,
+    #wrap[data-theme="glass"][data-glass="clear"] #card::after {display:none;}
+    #wrap:not([data-theme="glass"]) .person b {color:#142132;}
+    #wrap:not([data-theme="glass"]) .person i {color:#45576b;}
+    #wrap:not([data-theme="glass"]) .next {color:#344559;background:rgba(21,35,53,.08);border-color:rgba(21,35,53,.15);}
+    #wrap:not([data-theme="glass"]) .next .lbl {color:#53667e;}
+  }
+  @media(prefers-contrast:more) {
+    #wrap[data-theme="glass"] #card {background:Canvas !important;}
+    #wrap[data-theme="glass"] .sn,#wrap[data-theme="glass"] .et,
+    #wrap[data-theme="glass"] .mt,#wrap[data-theme="glass"] .ov,
+    #wrap[data-theme="glass"] .person b,#wrap[data-theme="glass"] .person i,
+    #wrap[data-theme="glass"] .next {color:CanvasText !important;}
+  }
 </style>
 </head>
 <body>
 
 <div id="wrap">
   <div id="card">
+    <div id="art" aria-hidden="true"></div>
     <div id="text">
       <div class="sn" id="show-name"></div>
       <div class="et" id="ep-title"></div>
       <div class="mt" id="meta-row"></div>
       <div class="ov"  id="overview"></div>
+      <div id="extra"><div id="cast" class="cast"></div><div id="next" class="next"></div></div>
     </div>
 
     <div id="poster"></div>
@@ -224,6 +359,13 @@ iina.onMessage("showData", function(d) {
 
   // Theme first, so it never flashes Classic
   if (d.theme) applyTheme(d.theme);
+  applyWidth(d.width);
+  applyPosterSide(d.poster);
+  applyGlassStyle(d.glass);
+  // CSS-art background accepts only explicitly allowlisted image hosts.
+  var art=String(d.posterUrl||"");
+  var safeArt=/^https:\/\/(?:image\.tmdb\.org|static\.tvmaze\.com)\/[A-Za-z0-9_./%-]+$/.test(art);
+  document.getElementById("card").style.setProperty("--art",safeArt?'url("'+art+'")':"none");
 
   document.getElementById("show-name").textContent = d.showTitle || "";
 
@@ -245,7 +387,24 @@ iina.onMessage("showData", function(d) {
     posterEl.innerHTML = "";
   }
 
-  document.getElementById("wrap").style.display = "block";
+  // Render optional cast and next episode without letting strings introduce
+  // markup, unsupported URLs or attributes.
+  var people=Array.isArray(d.cast)?d.cast.slice(0,4):[];
+  document.getElementById("cast").innerHTML=people.map(function(c){
+    var photo=String(c.photo||"");
+    var safe=/^https:\/\/image\.tmdb\.org\/t\/p\/[a-z0-9]+\/[A-Za-z0-9_./%-]+$/i.test(photo);
+    var role=String(c.role||"").replace(/\s*\((voice|uncredited|archive footage)\)/gi,"").split(" / ")[0];
+    return "<div class='person'>"+(safe?"<img src='"+photo+"' alt='' />":"")+
+      "<span><b>"+esc(c.name)+"</b><i>"+esc(role)+"</i></span></div>";
+  }).join("");
+  var next=d.next,el=document.getElementById("next");
+  el.innerHTML=next?"<span class='lbl'>Up next</span> "+
+    esc(next.code)+" · "+esc(next.title)+(next.date?" · "+esc(next.date):""):"";
+  el.style.display=next?"":"none";
+  var wrap=document.getElementById("wrap");
+  if(people.length||next)wrap.setAttribute("data-extra","");
+  else wrap.removeAttribute("data-extra");
+  wrap.style.display="block";
 });
 
 // Live opacity from the sidebar
@@ -264,13 +423,41 @@ iina.onMessage("setVerticalPos", function(d) {
 
 // Theme: classic | compact | poster
 function applyTheme(name) {
-  var ok = { classic: 1, compact: 1, poster: 1 };
+  var ok = { classic: 1, compact: 1, poster: 1, glass: 1 };
   document.getElementById("wrap").setAttribute("data-theme", ok[name] ? name : "classic");
 }
 
 iina.onMessage("setTheme", function(d) {
   applyTheme(d && d.value);
 });
+
+// Width 40-100 (% of the window), or nothing for the theme's own
+function applyWidth(v) {
+  var wrap = document.getElementById("wrap");
+  if (typeof v === "number" && v >= 40 && v <= 100) {
+    wrap.setAttribute("data-width", "");
+    wrap.style.setProperty("--card-width", v + "%");
+    if (v >= 100) wrap.setAttribute("data-full", ""); else wrap.removeAttribute("data-full");
+  } else {
+    wrap.removeAttribute("data-width");
+    wrap.removeAttribute("data-full");
+  }
+}
+
+iina.onMessage("setWidth", function(d) { applyWidth(d && d.value); });
+
+function applyPosterSide(v) {
+  var wrap = document.getElementById("wrap");
+  if (v === "left" || v === "right") wrap.setAttribute("data-poster", v); else wrap.removeAttribute("data-poster");
+}
+iina.onMessage("setPosterSide", function(d) { applyPosterSide(d && d.value); });
+
+// Frosted unless the sidebar says Clear or Colorful
+function applyGlassStyle(v) {
+  var wrap = document.getElementById("wrap");
+  if (v === "clear" || v === "colorful") wrap.setAttribute("data-glass", v); else wrap.removeAttribute("data-glass");
+}
+iina.onMessage("setGlassStyle", function(d) { applyGlassStyle(d && d.value); });
 
 // Hide only the info card; the skip pill is separate
 iina.onMessage("hideCard", function() {

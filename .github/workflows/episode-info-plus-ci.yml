@@ -35,6 +35,7 @@ jobs:
           node tests/episode-plus-identity.test.js
           node tests/upstream-134-integration.test.js
           node tests/upstream-135-integration.test.js
+          node tests/upstream-135-ui-integration.test.js
       - name: Check package and auto-update manifest
         run: |
           node -e 'const a=require("./Info.json");if(!Number.isInteger(a.ghVersion)||a.ghRepo!=="olivergiangvu/iina-episode-info-plus")process.exit(1)'

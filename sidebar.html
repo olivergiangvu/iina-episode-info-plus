@@ -342,6 +342,12 @@
     body { background:Canvas !important; color:CanvasText !important; }
     button, input { border-width:1.5px !important; }
   }
+  /* Preserve existing adaptive Light/Dark styling for new controls. */
+  #width-slider {accent-color:#d84334;}
+  #glass-pills .thm, #poster-pills .thm {min-width:0;}
+  @media(prefers-color-scheme:light){
+    #width-slider {accent-color:#b52c26;}
+  }
 </style>
 </head>
 <body>
@@ -640,8 +646,42 @@
       <button class="thm" data-t="classic" onclick="doSetTheme('classic')">Classic</button>
       <button class="thm" data-t="compact" onclick="doSetTheme('compact')">Compact</button>
       <button class="thm" data-t="poster"  onclick="doSetTheme('poster')">Poster</button>
+      <button class="thm" data-t="glass" onclick="doSetTheme('glass')">Glass</button>
     </div>
   </div>
+
+  <div class="op-row" id="glass-row" style="margin-top:7px;display:none">
+    <div class="sl" style="margin:0;flex:0 0 62px;white-space:nowrap">Style</div>
+    <div id="glass-pills" style="display:flex;gap:4px;flex:1">
+      <button class="thm" data-g="frosted" onclick="doSetGlassStyle('frosted')">Frosted</button>
+      <button class="thm" data-g="colorful" onclick="doSetGlassStyle('colorful')">Colorful</button>
+      <button class="thm" data-g="clear" onclick="doSetGlassStyle('clear')">Clear</button>
+    </div>
+  </div>
+  <div class="op-row" style="margin-top:7px">
+    <div class="sl" style="margin:0;flex:0 0 62px;white-space:nowrap">Width</div>
+    <input type="range" id="width-slider" min="40" max="100" value="100" oninput="doSetWidth(this.value)" style="flex:1;min-width:0" />
+    <span id="width-val" style="font-size:11px;min-width:35px;text-align:right">Auto</span>
+    <button id="width-auto" class="thm" style="display:none;padding:4px 7px" onclick="doResetWidth()" title="Reset width to theme default">Auto</button>
+  </div>
+  <div class="op-row" id="poster-row" style="margin-top:7px">
+    <div class="sl" style="margin:0;flex:0 0 62px;white-space:nowrap">Poster</div>
+    <div id="poster-pills" style="display:flex;gap:4px;flex:1">
+      <button class="thm" data-p="auto" onclick="doSetPosterSide('auto')">Auto</button>
+      <button class="thm" data-p="left" onclick="doSetPosterSide('left')">Left</button>
+      <button class="thm" data-p="right" onclick="doSetPosterSide('right')">Right</button>
+    </div>
+  </div>
+  <div class="sl" style="margin-top:13px;margin-bottom:6px">ON THE CARD</div>
+  <div class="op-row" style="margin-top:7px">
+    <label for="cast-toggle" style="flex:1;font-size:12px;font-weight:600">Cast <span style="font-weight:400;opacity:.7;font-size:10px">· up to 4 actors</span></label>
+    <input id="cast-toggle" type="checkbox" onchange="doToggleCast(this.checked)" style="accent-color:#30d158;width:16px;height:16px" />
+  </div>
+  <div class="op-row" style="margin-top:7px">
+    <label for="next-toggle" style="flex:1;font-size:12px;font-weight:600">Up Next <span style="font-weight:400;opacity:.7;font-size:10px">· next episode</span></label>
+    <input id="next-toggle" type="checkbox" onchange="doToggleNext(this.checked)" style="accent-color:#30d158;width:16px;height:16px" />
+  </div>
+  <div style="opacity:.65;font-size:10px;margin-top:6px">Optional; Compact stays a single line.</div>
   <div class="op-row" style="margin-top:7px">
     <div class="sl" style="margin:0;flex:0 0 62px;white-space:nowrap">Delay</div>
     <div style="flex:1"></div>
@@ -1067,6 +1107,7 @@ iina.onMessage("resendSettings",function(){
   iina.postMessage("setTmdbKey",{key:get("epinfo_tmdb_key")||""});
   iina.postMessage("setOverlayTheme",{value:get("epinfo_overlay_theme")||"classic"});
   iina.postMessage("setSkipEnabled",{enabled:get("epinfo_skip_enabled")==="true"});
+  sendCardSettings();
   iina.postMessage("sidebarReady",{});
 });
 
@@ -1441,7 +1482,111 @@ function paintThemePills(t) {
   for (var i = 0; i < pills.length; i++) {
     pills[i].className = "thm" + (pills[i].getAttribute("data-t") === t ? " on" : "");
   }
+  paintWidth(t);
+  paintPosterSide(t);
+  paintGlassStyle(t);
 }
+// Card width; unset is the theme's own (Auto)
+var THEME_WIDTH = { classic: 100, compact: 100, poster: 72, glass: 76 };
+function savedWidth() {
+  var v = parseInt(localStorage.getItem("epinfo_overlay_width") || "", 10);
+  return isNaN(v) ? null : Math.max(40, Math.min(100, v));
+}
+function paintWidth(t) {
+  var v = savedWidth();
+  t = t || localStorage.getItem("epinfo_overlay_theme") || "classic";
+  document.getElementById("width-slider").value = v !== null ? v : (THEME_WIDTH[t] || 100);
+  document.getElementById("width-val").textContent = v !== null ? v + "%" : "Auto";
+  document.getElementById("width-auto").style.display = v !== null ? "" : "none";
+}
+function doSetWidth(val) {
+  var v = Math.max(40, Math.min(100, parseInt(val, 10) || 100));
+  try { localStorage.setItem("epinfo_overlay_width", v); } catch(e) {}
+  paintWidth();
+  iina.postMessage("setOverlayWidth", { value: v });
+}
+function doResetWidth() {
+  try { localStorage.removeItem("epinfo_overlay_width"); } catch(e) {}
+  paintWidth();
+  iina.postMessage("setOverlayWidth", { value: null });
+}
+
+// Poster side; unset is the theme's own (Auto). Compact has no poster
+function savedPosterSide() {
+  var v = localStorage.getItem("epinfo_poster_side");
+  return v === "left" || v === "right" ? v : null;
+}
+function paintPosterSide(t) {
+  var v = savedPosterSide() || "auto";
+  var pills = document.querySelectorAll("#poster-pills .thm");
+  for (var i = 0; i < pills.length; i++) {
+    pills[i].className = "thm" + (pills[i].getAttribute("data-p") === v ? " on" : "");
+  }
+  t = t || localStorage.getItem("epinfo_overlay_theme") || "classic";
+  document.getElementById("poster-row").style.display = t === "compact" ? "none" : "";
+}
+function doSetPosterSide(v) {
+  var side = v === "left" || v === "right" ? v : null;
+  try { if (side) localStorage.setItem("epinfo_poster_side", side); else localStorage.removeItem("epinfo_poster_side"); } catch(e) {}
+  paintPosterSide();
+  iina.postMessage("setPosterSide", { value: side });
+}
+
+// Glass style: Frosted unless Clear or Colorful is picked; the row shows only with Glass
+function savedGlassStyle() {
+  var v = localStorage.getItem("epinfo_glass_style");
+  return v === "clear" || v === "colorful" ? v : null;
+}
+function paintGlassStyle(t) {
+  var v = savedGlassStyle() || "frosted";
+  var pills = document.querySelectorAll("#glass-pills .thm");
+  for (var i = 0; i < pills.length; i++) {
+    pills[i].className = "thm" + (pills[i].getAttribute("data-g") === v ? " on" : "");
+  }
+  t = t || localStorage.getItem("epinfo_overlay_theme") || "classic";
+  document.getElementById("glass-row").style.display = t === "glass" ? "flex" : "none";
+}
+function doSetGlassStyle(v) {
+  var style = v === "clear" || v === "colorful" ? v : null;
+  try { if (style) localStorage.setItem("epinfo_glass_style", style); else localStorage.removeItem("epinfo_glass_style"); } catch(e) {}
+  paintGlassStyle();
+  iina.postMessage("setGlassStyle", { value: style });
+}
+
+// Cast and Up next, both off by default
+function cardFlag(key, dflt) {
+  var s = localStorage.getItem(key);
+  return s === null ? dflt : s === "true";
+}
+function paintCardSwitches() {
+  document.getElementById("cast-toggle").checked = cardFlag("epinfo_card_cast", false);
+  document.getElementById("next-toggle").checked = cardFlag("epinfo_card_next", false);
+}
+function doToggleCast(on) {
+  try { localStorage.setItem("epinfo_card_cast", on ? "true" : "false"); } catch(e) {}
+  iina.postMessage("setCardCast", { on: !!on });
+}
+function doToggleNext(on) {
+  try { localStorage.setItem("epinfo_card_next", on ? "true" : "false"); } catch(e) {}
+  iina.postMessage("setCardNext", { on: !!on });
+}
+// Only what differs from the defaults
+function sendCardSettings() {
+  var w = savedWidth();
+  if (w !== null) iina.postMessage("setOverlayWidth", { value: w });
+  var ps = savedPosterSide();
+  if (ps) iina.postMessage("setPosterSide", { value: ps });
+  if (savedGlassStyle()) iina.postMessage("setGlassStyle", { value: savedGlassStyle() });
+  if (cardFlag("epinfo_card_cast", false)) iina.postMessage("setCardCast", { on: true });
+  if (cardFlag("epinfo_card_next", false)) iina.postMessage("setCardNext", { on: true });
+}
+(function() {
+  paintWidth();
+  paintPosterSide();
+  paintGlassStyle();
+  paintCardSwitches();
+})();
+
 function doSetTheme(t) {
   try { localStorage.setItem("epinfo_overlay_theme", t); } catch(e) {}
   paintThemePills(t);
@@ -1684,6 +1829,7 @@ function renderRecents() {
     var sk = localStorage.getItem("epinfo_skip_enabled") === "true";
     paintSkipToggle(sk);
     iina.postMessage("setSkipEnabled", { enabled: sk });
+    sendCardSettings();
 
     renderSearches();
     pruneRecents();
