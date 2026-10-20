@@ -69,25 +69,25 @@ jobs:
               --prerelease --latest=false
           else
             cat > /tmp/notes.md <<'NOTES'
-          Episode Info Plus v1.3.1 — Stable. Selective upstream v1.3.4 and v1.3.5 integration.
+          Episode Info Plus v1.3.2 — Stable.
 
-          Improvements:
-          - Recover current settings when the IINA sidebar sends startup preferences before the plugin registers listeners.
-          - Treat structured TMDB candidate HTTP 404 as a missing candidate, not a failed metadata service.
-          - Automatically offer TMDB search results for uncertain identities without overwriting typed queries or adding entries to Recent Searches.
-          - Following a user's explicit selection of a TV show, navigate to the season/episode inferred from the playback file. Never use the hint to identify the show automatically.
-          - Verify "Show - Episode Title" only when TMDB has one exact episode of a sufficiently known show with a compatible runtime.
-          - Resolve high absolute anime episode numbers only for Japanese animation when unambiguous across known season lengths.
-          - Update Skip Intro's TheIntroDB query to the upstream v4 API endpoint.
+          Validated in IINA/macOS playback: Dr. Stone S04E22 automatically identified with TMDB-verified metadata; Glass overlay rendered Cast (four actors) and Up Next correctly. Promoted from v1.3.2-beta.1 with no behavioral code changes beyond version metadata.
 
-          Compatibility and safety:
-          - Existing TMDB primary, TVmaze fallback and HTTP bridge normalization remain intact.
-          - Preserve Comet, MediaFusion/TorBox and AIOStreams HLS title matching, verified/provisional identities, diagnostics, subtitles, Light/Dark overlay and PiP.
-          - No additional permissions, plugin identifier or storage migrations; ghVersion 12.
-          - Glass theme, cast and Up Next are intentionally held for separate UI review due to the fork's customized adaptive appearance.
-          - CI tests exercise upstream matching extensions and false-positive guards; newly merged UI flows have not yet been independently confirmed on a user's Mac.
+          New UI (selected upstream v1.3.5 enhancements):
+          - Optional Glass card: Frosted, Colorful or Clear, tuned for macOS Light/Dark and high contrast.
+          - Adjustable card width 40–100% or Auto; Poster position Auto/Left/Right.
+          - Optional Cast (up to four actors) and Up Next, both OFF by default. Compact remains single-line.
+          - Extra metadata is fetched lazily via the existing TMDB connection and cached for the active episode.
+          - Preferences persist and are re-sent after a delayed sidebar startup.
 
-          Previous Stable v0.1.2 remains available for rollback. Independent MIT-licensed fork of Zain Imam's Episode Info.
+          Unchanged:
+          - TMDB-first matching and TVmaze fallback; Comet, MediaFusion/TorBox and AIOStreams HLS title matching.
+          - Verified/provisional identity rules, OpenSubtitles, SUBDL, Wyzie, Skip Intro, Light/Dark PiP behavior.
+          - Plugin identifier, network permissions, stored preferences and separation from Trakt+.
+          - ghVersion 14 for IINA update ordering.
+
+          CI includes matching regression, startup/settings, stale-response guards, Glass/Light-Dark, optional extras, JS syntax and package validation.
+          Previous Stable v1.3.1 remains published for rollback. Independent MIT-licensed fork of Zain Imam's Episode Info.
 
           NOTES
             gh release create "$TAG" "dist/Episode-Info-Plus-$VERSION.iinaplgz" \

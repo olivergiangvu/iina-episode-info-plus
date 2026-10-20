@@ -8,7 +8,7 @@ Maintained as an independent fork of [Zain Imam's Episode Info](https://github.c
 
 ## Episode Info Plus features
 
-**v1.3.2-beta.1 (UI preview):** selectively backports upstream v1.3.5 Glass theme (Frosted, Colorful, Clear), adjustable card width and poster side, and optional Cast/Up Next while preserving Episode Info Plus's system Light/Dark contrast. The extra metadata switches are off by default; the Classic, Compact and Poster default layout remains unchanged. Preferences use separate persisted localStorage keys and are restored after a busy startup. No changes to auto-matching, streaming identifiers, Trakt+, subtitle logic or plugin permissions. Install for IINA testing only; latest stable remains v1.3.1.
+**v1.3.2 Stable:** promoted from v1.3.2-beta.1 following real playback validation on IINA/macOS (Dr. Stone S04E22, verified TMDB metadata, cast and Up Next rendered together on the Glass card). Selectively backports upstream v1.3.5 Glass variants (Frosted, Colorful, Clear), adjustable card width (Auto or 40–100%), poster side (Auto/Left/Right), and optional Cast and Up Next. Keeps the fork's automatic Light/Dark text contrast, PiP, TMDB/TVmaze metadata, streaming recognition and original settings. Extra TMDB requests run only when Cast or Up Next are enabled; both default off. No plugin identifier, permissions, Trakt+ or storage migrations. **Previous Stable v1.3.1 remains available for rollback.**
 
 **v1.3.1 Stable — selective upstream v1.3.4–v1.3.5 integration:** Harden TMDB candidate 404 handling using IINA error `statusCode`; recover sidebar settings lost during busy startup; automatically present TMDB search results when episode identification is uncertain; and, only after the user picks a TV series, navigate to the inferred season/episode. AIOStreams, MediaFusion, TVmaze, Light/Dark/PiP styling, subtitle functions, and stored settings are unchanged. The conservative bare-title movie shortcut is intentionally deferred to avoid false positives. v0.1.2 remains available for rollback. Also adds verified unique episode-title matching, conservative absolute anime numbering and TheIntroDB v4. New Glass/cast/Up Next controls are deferred for Light/Dark UI review.
 
@@ -38,9 +38,9 @@ Open **IINA → Settings/Preferences → Plugins → Install from GitHub** and e
 https://github.com/olivergiangvu/iina-episode-info-plus
 ```
 
-Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **1.3.1** (GitHub Latest). The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
+Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **1.3.2** (GitHub Latest). The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
 
-GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (currently **12** for v1.3.1 Stable). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
+GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (currently **14** for v1.3.2 Stable). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
 
 ## Preserving settings
 
