@@ -25,8 +25,11 @@ assert(sidebar.includes("color:var(--ep-text); background:transparent"),
  "Native sidebar background must remain transparent");
 assert(/data-glass="clear"\]\s+#card\s*\{\s*background:rgba\(248,251,253,calc\(var\(--bg-opacity\) \* \.46\)\)/.test(overlay),
  "Clear light glass must follow Shade at a reduced tint alpha");
-assert(!overlay.includes("background:rgba(250,251,253,var(--bg-opacity))"),
- "Old near-opaque light Clear must not regress");
+// The baseline Classic/Poster card deliberately keeps full Shade opacity;
+// only the Glass Clear-specific selector must use a reduced alpha.
+const clearLight=overlay.split("#wrap[data-theme=\"glass\"][data-glass=\"clear\"] #card {").pop().split("}")[0];
+assert(!clearLight.includes("background:rgba(250,251,253,var(--bg-opacity))"),
+ "Old near-opaque Glass Clear must not regress");
 assert(overlay.includes("prefers-color-scheme:light"));
 assert(overlay.includes("prefers-contrast:more"));
 assert(overlay.includes("backdrop-filter:blur(14px) saturate(130%)"));
