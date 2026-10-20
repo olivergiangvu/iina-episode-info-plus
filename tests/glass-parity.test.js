@@ -32,6 +32,8 @@ for(const fragment of [
 ])assert(light.includes(fragment),"Missing new Light Glass CSS: "+fragment);
 assert(!light.includes("background:rgba(10,16,24,.84)"),
  "Light mode must not inherit the prior Smoked Glass override");
+assert(light.includes(':not([data-glass="clear"]) .ov'),
+ "Specific Frosted/Colorful dark-mode selectors must be overridden in Light Mode");
 assert(!light.includes("color:#f9fbff"),
  "Light Mode must not duplicate Dark Mode white typography");
 assert(dark.includes("background:rgba(12,14,20,0.84); opacity:var(--bg-opacity)"),

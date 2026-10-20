@@ -308,7 +308,15 @@
     #wrap[data-theme="glass"] .ov,
     #wrap[data-theme="glass"] .person i,
     #wrap[data-theme="glass"] .next,
-    #wrap[data-theme="glass"] .next .lbl {
+    #wrap[data-theme="glass"] .next .lbl,
+    /* Base dark Frosted/Colorful rules use :not(...), so match their
+       specificity explicitly or white labels will leak into Light Mode. */
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .sn,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .mt,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .ov,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .person i,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .next,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .next .lbl {
       color:#293749;
       opacity:1;
     }
