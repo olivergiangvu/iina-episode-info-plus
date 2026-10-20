@@ -1,4 +1,4 @@
-// IINA Plugin: Episode Info Plus v1.3.1 Stable
+// IINA Plugin: Episode Info Plus v1.3.2-beta.1
 
 const { core, event, utils, file, menu } = iina;
 const episodePlusIdentity = require("./episode-plus-identity.js");
@@ -159,7 +159,13 @@ var overlayBgOpacity   = 0.72;
 var overlayEnabled     = true; // set from the sidebar
 var overlayVerticalPos = 50;     // 0=top, 50=center, 100=bottom
 var pauseDelay         = 3;      // seconds before overlay shows on pause
-var overlayTheme       = "classic"; // classic | compact | poster
+var overlayTheme       = "classic"; // classic | compact | poster | glass
+var overlayWidth       = null; // null: theme default, otherwise 40–100%
+var posterSide         = null; // null: theme default, otherwise left/right
+var glassStyle         = null; // null: Frosted, otherwise Colorful/Clear
+var cardCast           = false; // opt-in
+var cardNext           = false; // opt-in
+var cardExtras         = { key:"", cast:null, next:null };
 var skipEnabled        = false;  // opt-in: skip intro/recap/credits
 var cardVisible        = false;  // info card showing?
 var skipVisible        = false;  // skip pill showing?
@@ -177,7 +183,7 @@ function log(msg) {
 
 function showOverlay(d) {
   if (!overlayEnabled) return;
-  overlay.postMessage("showData", {
+  var data = {
     showTitle:   d.showTitle  || "",
     epTitle:     d.epTitle    || "",
     code:        d.code       || "",
@@ -188,7 +194,15 @@ function showOverlay(d) {
     bgOpacity:   overlayBgOpacity,
     verticalPos: overlayVerticalPos,
     theme:       overlayTheme
-  });
+  };
+  // Only sent once changed, so a default card is the same as before
+  if (overlayWidth !== null) data.width = overlayWidth;
+  if (posterSide) data.poster = posterSide;
+  if (glassStyle) data.glass = glassStyle;
+  var x = cardExtras.key === extrasKey(d) ? cardExtras : null;
+  if (cardCast && x && x.cast && x.cast.length) data.cast = x.cast;
+  if (cardNext && x && x.next) data.next = x.next;
+  overlay.postMessage("showData", data);
   overlay.show();
   cardVisible = true;
   overlayVisible = true;
@@ -1560,6 +1574,77 @@ async function autoLookup(d) {
   sidebar.postMessage("autoLookupResult",reply);
 }
 
+// Cast and Up next for the card, fetched only when switched on
+function extrasKey(d) {
+  return d && d.tmdbId ? [d.tmdbId, d.isMovie ? "film" : d.season, d.isMovie ? "" : d.episode].join(":") : "";
+}
+
+function cardDate(iso) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ""));
+  if (!m) return "";
+  var text = (+m[3]) + " " + ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][+m[2] - 1] + " " + m[1];
+  return Date.UTC(+m[1], +m[2] - 1, +m[3]) > Date.now() ? "airs " + text : text;
+}
+
+function cardCastFor(d) {
+  var path = d.isMovie ? "/movie/" + d.tmdbId + "/credits"
+    : "/tv/" + d.tmdbId + "/season/" + d.season + "/episode/" + d.episode + "/credits";
+  return alTmdb(path, {}, 168, function(c) {
+    return (c.cast || []).concat(c.guest_stars || []).filter(function(p) { return p && p.profile_path; }).slice(0, 4)
+      .map(function(p) { return { name: p.name || "", role: p.character || "", photo: "https://image.tmdb.org/t/p/w185" + p.profile_path }; });
+  });
+}
+
+async function cardNextFor(d) {
+  var season = Number(d.season), episode = Number(d.episode);
+  var sd = await alSeason(d.tmdbId, season);
+  var after = sd ? sd.episodes.filter(function(e) { return e.n > episode; })[0] : null;
+  if (!after) {
+    // Last of the season: the next season's first
+    var show = await alTvDetails(d.tmdbId);
+    if (!show || show.seasons.indexOf(season + 1) < 0) return null;
+    var nx = await alSeason(d.tmdbId, season + 1);
+    after = nx && nx.episodes.length ? nx.episodes[0] : null;
+    season = season + 1;
+  }
+  return after ? { code: "S" + alPad2(season) + "E" + alPad2(after.n), title: after.name || "", date: cardDate(after.air) } : null;
+}
+
+async function loadCardExtras(d) {
+  var key = extrasKey(d);
+  if (!key || !tmdbKey) return false;
+  if (cardExtras.key !== key) cardExtras = { key: key, cast: null, next: null };
+  var x = cardExtras, changed = false;
+  if (cardCast && x.cast === null) {
+    x.cast = [];
+    try { x.cast = (await cardCastFor(d)) || []; } catch (e) {}
+    changed = true;
+  }
+  if (cardNext && x.next === null && !d.isMovie && d.season != null && d.episode != null) {
+    x.next = false;
+    try { x.next = (await cardNextFor(d)) || false; } catch (e) {}
+    changed = true;
+  }
+  if (changed) alCacheFlush();
+  // Redraw a card that's already up
+  if (changed && cardVisible && cardExtras === x && extrasKey(currentEpisode) === key) showOverlay(currentEpisode);
+  return changed;
+}
+
+// A switch from the sidebar, whether it arrives as true, 1 or "true"
+function msgFlag(v) { return !!v && v !== "false" && v !== "0"; }
+
+// Cast or Up next switched: fetch what's missing and redraw
+function cardExtrasChanged() {
+  if ((cardCast || cardNext) && currentEpisode) {
+    loadCardExtras(currentEpisode).then(function(changed) {
+      if (!changed && cardVisible && currentEpisode) showOverlay(currentEpisode);
+    }, function() {});
+  } else if (cardVisible && currentEpisode) {
+    showOverlay(currentEpisode);
+  }
+}
+
 // Sidebar handlers
 function registerSidebarHandlers() {
 
@@ -1567,9 +1652,12 @@ function registerSidebarHandlers() {
     log("episodeSelected: " + (info ? info.epTitle : "null"));
     currentEpisode = info;
     resolveSegments(info);
+    // No extra TMDB calls unless Cast/Up Next were explicitly enabled.
+    if ((cardCast || cardNext) && info) loadCardExtras(info).catch(function(e){ });
   });
 
   sidebar.onMessage("clearEpisode", function() {
+    cardExtras={key:"",cast:null,next:null};
     currentEpisode = null;
     segments = [];
     hideSkip();
@@ -1616,6 +1704,24 @@ function registerSidebarHandlers() {
     overlayTheme = d && d.value ? String(d.value) : "classic";
     overlay.postMessage("setTheme", { value: overlayTheme });
   });
+
+  // The sidebar sends these only once changed
+  sidebar.onMessage("setOverlayWidth", function(d) {
+    var w = d && d.value != null ? parseFloat(d.value) : NaN;
+    overlayWidth = isNaN(w) ? null : Math.max(40, Math.min(100, w));
+    if (overlayVisible) overlay.postMessage("setWidth", { value: overlayWidth });
+  });
+  sidebar.onMessage("setPosterSide", function(d) {
+    posterSide = d && (d.value === "left" || d.value === "right") ? d.value : null;
+    if (overlayVisible) overlay.postMessage("setPosterSide", { value: posterSide });
+  });
+  sidebar.onMessage("setGlassStyle", function(d) {
+    glassStyle = d && (d.value === "clear" || d.value === "colorful") ? d.value : null;
+    if (overlayVisible) overlay.postMessage("setGlassStyle", { value: glassStyle });
+  });
+  sidebar.onMessage("setCardCast", function(d) { cardCast = !!d && msgFlag(d.on); cardExtrasChanged(); });
+  sidebar.onMessage("setCardNext", function(d) { cardNext = !!d && msgFlag(d.on); cardExtrasChanged(); });
+
 
   // The sidebar's TMDB key, needed for IMDB ids
   sidebar.onMessage("setTmdbKey", function(d) {
