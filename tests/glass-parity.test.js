@@ -4,8 +4,8 @@ const fs=require("node:fs"),vm=require("node:vm"),path=require("node:path");
 const overlay=fs.readFileSync(path.resolve(__dirname,"../overlay.html"),"utf8");
 const sidebar=fs.readFileSync(path.resolve(__dirname,"../sidebar.html"),"utf8");
 const info=require("../Info.json");
-assert.equal(info.version,"1.3.3-beta.5");
-assert.equal(info.ghVersion,19);
+assert.equal(info.version,"1.3.3-beta.6");
+assert.equal(info.ghVersion,20);
 assert(sidebar.includes("--ep-ink:#1f2023"));
 assert(sidebar.includes("color:var(--ep-text); background:transparent"));
 const mark="/* Episode Info Plus: macOS Light and Dark use DIFFERENT glass materials.";
@@ -56,4 +56,32 @@ assert(overlay.includes('id="cast"')&&overlay.includes('id="next"'));
 assert(overlay.includes("prefers-contrast:more"));
 // Local cushioning intentionally softens only the text zone, not the entire
 // glass panel; contrast is scene-dependent and requires macOS visual testing.
-console.log("Light native-glass tint 13.68% at Shade 57%; local text scrim 52%; Dark untouched: PASS");
+// The previous low-contrast inline verification styles must have a Light-only
+// override. Do not change the source hues for the already-approved Dark Mode.
+assert(sidebar.includes('body #s-meta .rat {\n      color:#916208 !important'),
+ "Light sidebar rating should use a warm, readable amber");
+assert(sidebar.includes("body #s-auto #epplus-match-state {") &&
+  sidebar.includes("color:#17623f !important"),
+ "Verified status requires opaque deep green in Light Mode");
+assert(sidebar.includes('data-pending", info.metadataPending ? "true" : "false"'),
+ "Provisional verified state must remain visually distinguishable");
+assert(sidebar.includes('body #s-auto #epplus-match-state[data-pending="true"]'));
+assert(sidebar.includes("color:#195c91 !important"),
+ "Search correction link should remain distinct and legible");
+const microStart=light.indexOf("/* beta.6: micro-typography");
+assert(microStart>=0,"Missing Light-only Glass microtype rules");
+const micro=light.slice(microStart);
+for(const k of [
+ "#wrap[data-theme=\"glass\"] .sn,",
+ "#wrap[data-theme=\"glass\"] .mt,",
+ "#wrap[data-theme=\"glass\"] .ov,",
+ "#wrap[data-theme=\"glass\"] .person i,",
+ "#wrap[data-theme=\"glass\"] .next .lbl,",
+ "font-size:12.25px","font-weight:550","color:#344354",
+ "color:#344557","opacity:1","text-shadow:none"
+])assert(micro.includes(k),"Missing clear microtext rule "+k);
+assert(!dark.includes("/* beta.6: micro-typography"),"Dark styling must not change");
+assert(!light.includes("background:rgba(250,251,253,var(--bg-opacity))"),
+ "No new opaque full-Glass background allowed");
+
+console.log("beta.6 Light Glass microtype, amber rating, verified-status colors and Dark isolation: PASS");

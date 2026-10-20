@@ -442,6 +442,39 @@
       color:#fff !important;
     }
   }
+  /* beta.6: micro-status and rating clarity on Light native glass.
+     Auto-verification sets inline color in JS: override it only in Light.
+     Dark Mode retains the previously approved colors unchanged. */
+  @media (prefers-color-scheme: light) {
+    body #s-meta .rat {
+      color:#916208 !important;
+      font-weight:750;
+      text-shadow:0 1px 0 rgba(255,252,234,.26);
+    }
+    body #s-auto {
+      color:#354457 !important;
+      font-size:10.5px !important;
+      font-weight:550;
+      line-height:1.48;
+      opacity:1;
+    }
+    body #s-auto button,
+    body #s-auto button[style*="color:rgba"] {
+      color:#195c91 !important;
+      font-size:10.5px !important;
+      font-weight:700;
+      text-decoration:none;
+    }
+    body #s-auto #epplus-match-state {
+      color:#17623f !important;
+      font-size:10.5px;
+      font-weight:700;
+      opacity:1;
+    }
+    body #s-auto #epplus-match-state[data-pending="true"] {
+      color:#795317 !important;
+    }
+  }
   /* Preserve existing adaptive Light/Dark styling for new controls. */
   #width-slider {accent-color:#d84334;}
   #glass-pills .thm, #poster-pills .thm {min-width:0;}
@@ -1337,6 +1370,8 @@ function showAutoMatch(info) {
   var verifiedSource = info.metadataSource==="TVmaze" ? "TVmaze" : "TMDB";
   stage.textContent = info.metadataPending ? "· Provisional identity (not verified)" : "· "+verifiedSource+" verified";
   stage.style.color = info.metadataPending ? "#a76b20" : "#1b9555";
+  // Keep explicit semantic state for Light Mode's readable, scoped CSS.
+  stage.setAttribute("data-pending", info.metadataPending ? "true" : "false");
   autoStatus(info.metadataPending ? "Episode recognized from playback filename · fetching metadata" : "Matched and verified via "+verifiedSource);
 }
 

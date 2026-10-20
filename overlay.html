@@ -350,6 +350,65 @@
     #wrap[data-theme="glass"] .person img {
       box-shadow:0 0 0 1px rgba(36,50,68,.24);
     }
+    /* beta.6: micro-typography inherits dark ink, never translucent ink.
+       All rules are scoped to LIGHT + Glass, leaving Dark/Classic unchanged. */
+    #wrap[data-theme="glass"] #text,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) #text {
+      text-shadow:none;
+    }
+    #wrap[data-theme="glass"] .sn,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .sn {
+      color:#293647;
+      font-size:13px;
+      font-weight:700;
+      letter-spacing:.13em;
+      line-height:1.4;
+      opacity:1;
+    }
+    #wrap[data-theme="glass"] .mt,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .mt {
+      color:#253345;
+      font-size:15px;
+      font-weight:550;
+      line-height:1.4;
+      opacity:1;
+    }
+    #wrap[data-theme="glass"] .ov,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .ov {
+      color:#243242;
+      font-size:15.5px;
+      font-weight:500;
+      line-height:1.58;
+      opacity:1;
+    }
+    #wrap[data-theme="glass"] .person b {
+      color:#192431;
+      font-weight:700;
+    }
+    #wrap[data-theme="glass"] .person i,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .person i {
+      color:#344354;
+      font-size:12.25px;
+      font-weight:550;
+      line-height:1.42;
+      opacity:1;
+    }
+    #wrap[data-theme="glass"] .next,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .next {
+      color:#273646;
+      font-size:12.5px;
+      font-weight:550;
+      line-height:1.4;
+      opacity:1;
+    }
+    #wrap[data-theme="glass"] .next .lbl,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .next .lbl {
+      color:#344557;
+      font-size:11px;
+      font-weight:750;
+      letter-spacing:.11em;
+      opacity:1;
+    }
     #wrap:not([data-theme="glass"]) .person b {color:#142132;}
     #wrap:not([data-theme="glass"]) .person i {color:#45576b;}
     #wrap:not([data-theme="glass"]) .next {
