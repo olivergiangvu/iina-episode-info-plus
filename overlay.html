@@ -148,7 +148,7 @@
   #wrap[data-theme="glass"] .sn { color:rgba(255,255,255,0.62); margin-bottom:8px; }
   #wrap[data-theme="glass"] .et { font-size:30px; white-space:normal; margin-bottom:8px; }
   #wrap[data-theme="glass"] .mt { color:rgba(255,255,255,0.74); margin-bottom:10px; }
-  #wrap[data-theme="glass"] .ov { color:rgba(255,255,255,0.84); -webkit-line-clamp:3; font-size:15px; line-height:1.55; }
+  #wrap[data-theme="glass"] .ov { color:rgba(255,255,255,.94); -webkit-line-clamp:3; font-size:15.5px; line-height:1.55; font-weight:500; }
   /* Over a light poster the grey labels faded, so near-white text with a firmer shadow */
   #wrap[data-theme="glass"]:not([data-glass="clear"]) #text { text-shadow:0 1px 3px rgba(0,0,0,0.75), 0 0 10px rgba(0,0,0,0.3); }
   #wrap[data-theme="glass"]:not([data-glass="clear"]) .sn,
@@ -177,7 +177,7 @@
   .person b, .person i {
     display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
-  .person b { font-size:12.5px; font-weight:600; color:#fff; }
+  .person b { font-size:13px; font-weight:650; color:#fff; }
   .person i { font-style:normal; font-size:11.5px; color:rgba(255,255,255,0.62); }
   .next {
     display:inline-flex; align-items:center; gap:9px; margin-top:14px;
@@ -269,35 +269,52 @@
     #wrap[data-theme="glass"] .person i,#wrap[data-theme="glass"] .next,
     #wrap[data-theme="glass"] .next .lbl {color:rgba(255,255,255,.90);}
     #wrap[data-theme="glass"] .rat {color:#f5c518;}
-    /* Clear is truly translucent: Shade governs tint, not child opacity.
-       A white 0.72 layer looked nearly opaque compared with Dark Mode.
-       IINA's separate overlay WebView cannot blur the moving video itself. */
+    /* In Light Mode a translucent WHITE Clear card produced dark text over
+       an unpredictable grey/video luminance. Video pixels cannot be sampled
+       by the separate IINA overlay WebView, so invert the MATERIAL, not the
+       text. A neutral dark smoked glass works in both macOS appearances.
+       At the minimum Shade threshold .68, the .84-black tint produces
+       >=4.5:1 white text even above an entirely white frame. */
     #wrap[data-theme="glass"][data-glass="clear"] #card {
-      /* Safe default for older WebKit builds lacking calc multiplication. */
-      background:rgba(248,251,253,.33);
-      background:rgba(248,251,253,calc(var(--bg-opacity) * .46));
-      border-color:rgba(21,35,53,.20);
-      -webkit-backdrop-filter:blur(14px) saturate(130%);
-      backdrop-filter:blur(14px) saturate(130%);
-      box-shadow:0 16px 48px rgba(12,22,34,.22),
-        inset 0 1px 0 rgba(255,255,255,.58);
+      background:transparent;
+      border-color:rgba(255,255,255,.24);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.25),
+        0 20px 54px rgba(0,0,0,.34);
     }
-    /* A restrained local readability scrim helps dark text against changing
-       bright video, without adding a second opaque card-wide white layer. */
+    #wrap[data-theme="glass"][data-glass="clear"] #card::before {
+      display:block;
+      background:rgba(10,16,24,.84);
+      opacity:.72; /* for older WebKit without clamp() */
+      opacity:clamp(.68,var(--bg-opacity),1);
+    }
+    #wrap[data-theme="glass"][data-glass="clear"] #card::after {
+      display:block;
+      background:linear-gradient(130deg,rgba(255,255,255,.10),transparent 58%);
+    }
     #wrap[data-theme="glass"][data-glass="clear"] #text {
-      text-shadow:0 1px 1px rgba(255,255,255,.40);
+      text-shadow:0 1px 2px rgba(0,0,0,.44);
     }
     #wrap[data-theme="glass"][data-glass="clear"] .et,
-    #wrap[data-theme="glass"][data-glass="clear"] .person b {color:#142132;}
+    #wrap[data-theme="glass"][data-glass="clear"] .person b {color:#f9fbff;}
     #wrap[data-theme="glass"][data-glass="clear"] .sn,
     #wrap[data-theme="glass"][data-glass="clear"] .mt,
     #wrap[data-theme="glass"][data-glass="clear"] .ov,
     #wrap[data-theme="glass"][data-glass="clear"] .person i,
     #wrap[data-theme="glass"][data-glass="clear"] .next,
-    #wrap[data-theme="glass"][data-glass="clear"] .next .lbl {color:#344559;}
-    #wrap[data-theme="glass"][data-glass="clear"] .rat {color:#8b5a00;}
-    #wrap[data-theme="glass"][data-glass="clear"] #card::before,
-    #wrap[data-theme="glass"][data-glass="clear"] #card::after {display:none;}
+    #wrap[data-theme="glass"][data-glass="clear"] .next .lbl {
+      color:rgba(255,255,255,.94);
+    }
+    #wrap[data-theme="glass"][data-glass="clear"] .mt span+span::before {
+      color:rgba(255,255,255,.72);
+    }
+    #wrap[data-theme="glass"][data-glass="clear"] .rat {color:#ffd25b;}
+    #wrap[data-theme="glass"][data-glass="clear"] .next {
+      background:rgba(255,255,255,.12);
+      border-color:rgba(255,255,255,.24);
+    }
+    #wrap[data-theme="glass"][data-glass="clear"] .person img {
+      box-shadow:0 0 0 1px rgba(255,255,255,.38);
+    }
     #wrap:not([data-theme="glass"]) .person b {color:#142132;}
     #wrap:not([data-theme="glass"]) .person i {color:#45576b;}
     #wrap:not([data-theme="glass"]) .next {color:#344559;background:rgba(21,35,53,.08);border-color:rgba(21,35,53,.15);}
@@ -305,6 +322,9 @@
   }
   @media(prefers-contrast:more) {
     #wrap[data-theme="glass"] #card {background:Canvas !important;}
+    #wrap[data-theme="glass"] #card::before,
+    #wrap[data-theme="glass"] #card::after {display:none !important;}
+    #wrap[data-theme="glass"] #text {text-shadow:none !important;}
     #wrap[data-theme="glass"] .sn,#wrap[data-theme="glass"] .et,
     #wrap[data-theme="glass"] .mt,#wrap[data-theme="glass"] .ov,
     #wrap[data-theme="glass"] .person b,#wrap[data-theme="glass"] .person i,
