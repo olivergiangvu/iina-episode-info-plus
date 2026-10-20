@@ -7,8 +7,8 @@ const main=fs.readFileSync(path.join(__dirname,"../main.js"),"utf8");
 const sidebar=fs.readFileSync(path.join(__dirname,"../sidebar.html"),"utf8");
 const overlayHtml=fs.readFileSync(path.join(__dirname,"../overlay.html"),"utf8");
 const manifest=require("../Info.json");
-assert.equal(manifest.version,"1.3.2");
-assert.equal(manifest.ghVersion,14);
+assert.equal(manifest.version,"1.3.3");
+assert.equal(manifest.ghVersion,24);
 assert.equal(manifest.identifier,"io.github.olivergiangvu.iinaepisodeinfoplus");
 function segment(src,a,b){
  const i=src.indexOf(a),j=src.indexOf(b,i+a.length);
@@ -87,7 +87,7 @@ function rendered(){return sent.filter(x=>x.type==="showData").at(-1).data}
  for(const t of ['data-theme="glass"','data-glass="clear"','data-glass="colorful"',
    'data-width','data-poster="left"','data-poster="right"'])
   assert(overlayHtml.includes(t),"Missing overlay CSS "+t);
- assert(overlayHtml.includes("@media (prefers-color-scheme:light)"));
+ assert(/@media\s*\(prefers-color-scheme:\s*light\)/.test(overlayHtml));
  assert(overlayHtml.includes("prefers-contrast:more"));
  for(const key of ["epinfo_overlay_width","epinfo_poster_side","epinfo_glass_style",
    "epinfo_card_cast","epinfo_card_next"])

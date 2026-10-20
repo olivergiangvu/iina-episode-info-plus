@@ -34,6 +34,7 @@ jobs:
           node tests/upstream-134-integration.test.js
           node tests/upstream-135-integration.test.js
           node tests/upstream-135-ui-integration.test.js
+          node tests/glass-parity.test.js
           node <<'NODE'
           const i = require('./Info.json');
           if (i.ghRepo !== 'olivergiangvu/iina-episode-info-plus' ||
@@ -68,28 +69,9 @@ jobs:
               --title "Episode Info Plus $VERSION" --notes-file /tmp/notes.md \
               --prerelease --latest=false
           else
-            cat > /tmp/notes.md <<'NOTES'
-          Episode Info Plus v1.3.2 — Stable.
-
-          Validated in IINA/macOS playback: Dr. Stone S04E22 automatically identified with TMDB-verified metadata; Glass overlay rendered Cast (four actors) and Up Next correctly. Promoted from v1.3.2-beta.1 with no behavioral code changes beyond version metadata.
-
-          New UI (selected upstream v1.3.5 enhancements):
-          - Optional Glass card: Frosted, Colorful or Clear, tuned for macOS Light/Dark and high contrast.
-          - Adjustable card width 40–100% or Auto; Poster position Auto/Left/Right.
-          - Optional Cast (up to four actors) and Up Next, both OFF by default. Compact remains single-line.
-          - Extra metadata is fetched lazily via the existing TMDB connection and cached for the active episode.
-          - Preferences persist and are re-sent after a delayed sidebar startup.
-
-          Unchanged:
-          - TMDB-first matching and TVmaze fallback; Comet, MediaFusion/TorBox and AIOStreams HLS title matching.
-          - Verified/provisional identity rules, OpenSubtitles, SUBDL, Wyzie, Skip Intro, Light/Dark PiP behavior.
-          - Plugin identifier, network permissions, stored preferences and separation from Trakt+.
-          - ghVersion 14 for IINA update ordering.
-
-          CI includes matching regression, startup/settings, stale-response guards, Glass/Light-Dark, optional extras, JS syntax and package validation.
-          Previous Stable v1.3.1 remains published for rollback. Independent MIT-licensed fork of Zain Imam's Episode Info.
-
-          NOTES
+            NOTES_FILE="docs/releases/v$VERSION.md"
+            test -s "$NOTES_FILE" || { echo "Missing versioned stable release notes $NOTES_FILE"; exit 1; }
+            cp "$NOTES_FILE" /tmp/notes.md
             gh release create "$TAG" "dist/Episode-Info-Plus-$VERSION.iinaplgz" \
               --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
               --title "Episode Info Plus v$VERSION — Stable" --notes-file /tmp/notes.md \

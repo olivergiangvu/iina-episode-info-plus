@@ -8,6 +8,25 @@ Maintained as an independent fork of [Zain Imam's Episode Info](https://github.c
 
 ## Episode Info Plus features
 
+**Current Stable: v1.3.3** — promoted from the Mac-tested beta.9. Light/Dark Glass and sidebar are visually aligned; no functional changes to matching, metadata, subtitles or Skip Intro since beta.9. See [v1.3.3 release notes](docs/releases/v1.3.3.md). Previous Stable v1.3.2 remains for rollback.
+
+**v1.3.3-beta.9 — native OSD-style text repair:** Immediately removes all beta.8 light text strokes and four-direction white edging. Light Glass now uses crisp, unoutlined near-black typography over one evenly translucent neutral-grey material, scaled with Shade (about 59% at Shade 57%) to protect contrast on darker video. No central scrim, poster/color changes, Cast/Up Next API changes or per-video sampling. Dark Mode and native IINA sidebar are unchanged. This is an approximation of native OSD; HTML/WebView cannot guarantee the exact native video-backdrop blur. Mac visual verification is required before Stable.
+
+
+**v1.3.3-beta.8 (Light Glass glyph contrast):** Replaces the lost per-text contrast after beta.7 removed its opaque center scrim with *glyph-level* pearlescent edge separation. Light titles, synopsis, metadata and cast roles retain dark native-ink fill but receive narrow crisp light edges so they are identifiable over the dark footage that can show through the low-alpha Glass. No text-column background, white blur rectangle, or extra full-card opacity is reintroduced. The Up Next pill stays a controlled surface; the rating remains amber. Light sidebar, all Dark Mode styling, runtime matching and network code remain unchanged. This is a visual beta; validate on IINA/macOS with both a dark and light scene before promotion.
+
+
+
+**v1.3.3-beta.7 (uniform Light Glass):** Removes the 52%-white blurred `#text::before` cushion behind the overlay's center column. That extra layer was responsible for the visibly opaque/milky patch compared with Dark Mode. Light now has one continuous low-alpha background film (unchanged Shade mapping from beta.5), no text-specific background or blur, and retains the high-contrast opaque micro-typography introduced in beta.6. Dark Mode, sidebar styling, Glass variants, metadata, Trakt+ and stored preferences are unchanged. Visual checking against both a bright and dark IINA scene is required before Stable.
+
+
+
+**Glass visual update (beta.5):** Dark Mode remains completely unchanged. Light Mode now uses a low-alpha pearl tint (~14% at Shade 57%) across the full card and a softly blurred, localized 52% backing only beneath the text column, rather than the prior 68% opaque-looking global overlay. Text, Cast and Up Next remain fully opaque with dark neutral typography. The sidebar and metadata/recognition code are unchanged. Light Mode rendering must be checked on both dark and bright video before Stable promotion.
+
+**v1.3.3-beta.6 (Light Glass microtype + sidebar rating):** Keeps beta.5 background, Shade mapping and approved Dark Mode intact. In Light Glass only, strengthens metadata, synopsis, cast roles and Up Next microtext without dimming text or adding a white halo, while retaining full video translucency. Light native-glass sidebar gets a richer dark amber rating, stronger 'Found automatically' and 'Not right? Search' text and a deep-green TMDB/TVmaze verified label (including the provisional warning state). No changes to the matching engine, API requests, Glass background opacity, Trakt+ or stored settings.
+
+**v1.3.3-beta.5 (translucent Light Glass, localized readability):** Light Mode Glass Clear now uses readable dark smoked glass and near-white text, never a low-contrast dark-blue-on-grey card. Shade remains adjustable with a minimum opacity for high contrast, and cast/Up Next remain crisp. Frosted and Colorful retain poster-backed blur with contrast-safe text. The Light sidebar canvas is transparent like Trakt+; both sidebars share the same semantic glass tokens and native IINA host material. Text, posters, cast, Up Next and existing settings remain fully opaque. No matching, TMDB/TVmaze, subtitle or scrobble changes. Beta.3 also uses Trakt+-inspired neutral near-black headings, stronger help/metadata labels and readable form captions in the Episode Info+ Light sidebar, without changing its transparency. Beta must be checked on macOS in both appearances before Stable promotion.
+
 **v1.3.2 Stable:** promoted from v1.3.2-beta.1 following real playback validation on IINA/macOS (Dr. Stone S04E22, verified TMDB metadata, cast and Up Next rendered together on the Glass card). Selectively backports upstream v1.3.5 Glass variants (Frosted, Colorful, Clear), adjustable card width (Auto or 40–100%), poster side (Auto/Left/Right), and optional Cast and Up Next. Keeps the fork's automatic Light/Dark text contrast, PiP, TMDB/TVmaze metadata, streaming recognition and original settings. Extra TMDB requests run only when Cast or Up Next are enabled; both default off. No plugin identifier, permissions, Trakt+ or storage migrations. **Previous Stable v1.3.1 remains available for rollback.**
 
 **v1.3.1 Stable — selective upstream v1.3.4–v1.3.5 integration:** Harden TMDB candidate 404 handling using IINA error `statusCode`; recover sidebar settings lost during busy startup; automatically present TMDB search results when episode identification is uncertain; and, only after the user picks a TV series, navigate to the inferred season/episode. AIOStreams, MediaFusion, TVmaze, Light/Dark/PiP styling, subtitle functions, and stored settings are unchanged. The conservative bare-title movie shortcut is intentionally deferred to avoid false positives. v0.1.2 remains available for rollback. Also adds verified unique episode-title matching, conservative absolute anime numbering and TheIntroDB v4. New Glass/cast/Up Next controls are deferred for Light/Dark UI review.
@@ -38,9 +57,9 @@ Open **IINA → Settings/Preferences → Plugins → Install from GitHub** and e
 https://github.com/olivergiangvu/iina-episode-info-plus
 ```
 
-Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **1.3.2** (GitHub Latest). The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
+Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **1.3.3** (GitHub Latest). The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
 
-GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (currently **14** for v1.3.2 Stable). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
+GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (currently **24** for v1.3.3 Stable). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
 
 ## Preserving settings
 

@@ -188,16 +188,33 @@
   /* Episode Info Plus beta.3 — contrast tokens for native IINA Light/Dark.
      Specific rules replace the first beta's generic white-text overrides.
      All original dark appearances and settings keys remain untouched. */
-  :root { color-scheme: light dark; }
+  /* Shared Plus glass palette — semantic colors rather than opacity on content.
+     This matches Trakt+ and keeps native IINA's glass window visible. */
+  :root {
+    color-scheme: light dark;
+    --plus-glass-panel:rgba(16,22,32,.14);
+    --plus-glass-border:rgba(255,255,255,.16);
+    --plus-glass-primary:#e9edf3;
+    --plus-glass-secondary:rgba(233,237,243,.76);
+    --plus-glass-blur:14px;
+  }
   @media (prefers-color-scheme: dark) {
     body { color:#e9edf3; background:rgba(12,15,21,.26); }
   }
   @media (prefers-color-scheme: light) {
+    :root {
+      --plus-glass-panel:rgba(248,250,253,.16);
+      --plus-glass-border:rgba(34,49,70,.15);
+      --plus-glass-primary:#19283a;
+      --plus-glass-secondary:#40546d;
+    }
     body {
-      --ep-text:#19283a; --ep-title:#142134; --ep-muted:#46576b;
-      --ep-subtle:#53647a; --ep-border:rgba(35,52,75,.19);
+      --ep-text:#162336; --ep-title:#101c2b; --ep-muted:#2c3d52;
+      --ep-subtle:#36485e; --ep-border:rgba(35,52,75,.19);
       --ep-surface:rgba(34,49,70,.06); --ep-red:#ac302a;
-      color:var(--ep-text); background:rgba(248,249,252,.96);
+      /* IINA hosts the native macOS sidebar material. A .96 white layer
+         covered it; use the same transparent canvas as Trakt+ instead. */
+      color:var(--ep-text); background:transparent;
     }
     body, body input, body select, body textarea, body button { color:var(--ep-text); }
     /* Common card, dividers and metadata */
@@ -209,7 +226,7 @@
     body #opacity-val, body #vpos-val {
       color:var(--ep-muted);
     }
-    body #s-desc { color:#3c4b5f; }
+    body #s-desc { color:#24374d; }
     body hr.div, body .rrow, body .sub-row, body .sub-none-row {
       border-color:var(--ep-border);
     }
@@ -342,6 +359,122 @@
     body { background:Canvas !important; color:CanvasText !important; }
     button, input { border-width:1.5px !important; }
   }
+  /* Shared with Trakt+: translucent component surfaces, opaque text. */
+  body #ov-status-box, body .op-wrap {
+    border-color:var(--plus-glass-border);
+  }
+  @media(prefers-color-scheme:light) {
+    body #ov-status-box, body .op-wrap {
+      background-color:var(--plus-glass-panel) !important;
+    }
+  }
+  /* v1.3.3-beta.3: Trakt+-style neutral ink on native glass.
+     Typography remains opaque; do not brighten/darken the host material.
+     This is deliberately AFTER legacy Light overrides so specific selectors
+     win without affecting Dark, matching, subtitles or overlay composition. */
+  @media (prefers-color-scheme:light) {
+    body {
+      --ep-ink:#1f2023;
+      --ep-copy:#283341;
+      --ep-hint:#354458;
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility;
+    }
+    body .ep-headline, body .ep-headline[style*="color:#fff"] {
+      color:var(--ep-ink) !important;
+      font-weight:700 !important;
+      letter-spacing:-.005em;
+    }
+    body .ep-helper {
+      color:var(--ep-copy) !important;
+      font-size:10.5px !important;
+      font-weight:500;
+      line-height:1.4;
+    }
+    body #s-title,body .rn,body .rc-t {
+      color:var(--ep-ink) !important;
+      font-weight:700;
+    }
+    body #s-show,body #s-meta,body #s-desc,
+    body #s-auto,body #s-auto[style*="color:rgba"],
+    body .rs,body .rc-s,body .sub-name,body .sub-meta {
+      color:var(--ep-copy) !important;
+    }
+    body #s-desc {font-weight:500;line-height:1.5;}
+    body #auto-status,body #skip-status,body .msg,
+    body .key-desc,body .key-msg,body #os-login-msg,
+    body #os-key-msg,body #sd-key-msg,body #wz-key-msg {
+      color:var(--ep-copy) !important;
+    }
+    body .sl,body .sub-hd,body summary.sub-hd,
+    body .sub-sec[open] > summary.sub-hd,
+    body .lang-lbl {
+      color:var(--ep-ink) !important;
+      font-weight:700;
+    }
+    body #epplus-metadata-diagnostics summary {
+      color:var(--ep-copy) !important;
+      opacity:1 !important;
+      font-weight:600;
+    }
+    body #os-login-form > div:first-child,
+    body #os-login-form > div:first-child[style*="color:rgba"],
+    body #os-login-form span[style*="color:rgba"] {
+      color:var(--ep-copy) !important;
+    }
+    body #api-ok button,body #rc-clear,body .rc-b:not(.pinned) {
+      color:var(--ep-hint) !important;
+    }
+    body #s-auto button,body #os-dotorg-link {
+      color:#18558a !important;
+      font-weight:600;
+    }
+    body #show-more {color:#a52b27 !important;font-weight:600;}
+    body .sq,body .pill,body .thm,body .sub-btn2,
+    body .sub-load {color:var(--ep-copy) !important;}
+    body .sub-btn2:disabled,body #os-login-btn:disabled,
+    body #go:disabled,body #os-manual-btn:disabled {
+      color:#4d5b6a !important;
+    }
+    /* Preserve white labels on saturated red/green CTA surfaces. */
+    body #go:not(:disabled),body #os-login-btn:not(:disabled),
+    body .pill.on,body .thm.on,body .sub-load.loaded {
+      color:#fff !important;
+    }
+  }
+  /* beta.6: micro-status and rating clarity on Light native glass.
+     Auto-verification sets inline color in JS: override it only in Light.
+     Dark Mode retains the previously approved colors unchanged. */
+  @media (prefers-color-scheme: light) {
+    body #s-meta .rat {
+      color:#916208 !important;
+      font-weight:750;
+      text-shadow:0 1px 0 rgba(255,252,234,.26);
+    }
+    body #s-auto {
+      color:#354457 !important;
+      font-size:10.5px !important;
+      font-weight:550;
+      line-height:1.48;
+      opacity:1;
+    }
+    body #s-auto button,
+    body #s-auto button[style*="color:rgba"] {
+      color:#195c91 !important;
+      font-size:10.5px !important;
+      font-weight:700;
+      text-decoration:none;
+    }
+    body #s-auto #epplus-match-state {
+      color:#17623f !important;
+      font-size:10.5px;
+      font-weight:700;
+      opacity:1;
+    }
+    body #s-auto #epplus-match-state[data-pending="true"] {
+      color:#795317 !important;
+    }
+  }
   /* Preserve existing adaptive Light/Dark styling for new controls. */
   #width-slider {accent-color:#d84334;}
   #glass-pills .thm, #poster-pills .thm {min-width:0;}
@@ -353,7 +486,7 @@
 <body>
 <!-- Overlay controls -->
 <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:7px;padding:7px 10px;margin-bottom:8px">
-  <div style="font-size:12px;font-weight:600;color:#fff">Show Overlay on Pause</div>
+  <div class="ep-headline" style="font-size:12px;font-weight:600;color:#fff">Show Overlay on Pause</div>
   <label style="position:relative;display:inline-block;width:44px;height:26px;flex-shrink:0;margin-left:10px;cursor:pointer">
     <input type="checkbox" id="overlay-toggle" style="opacity:0;width:0;height:0;position:absolute" onchange="doToggleOverlay(this.checked)" />
     <span id="toggle-track" style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.2);border-radius:26px;transition:background .2s">
@@ -366,8 +499,8 @@
 <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:7px;padding:7px 10px;margin-bottom:8px">
   <div style="display:flex;align-items:center;justify-content:space-between">
     <div>
-      <div style="font-size:12px;font-weight:600;color:#fff">Automatic Lookup</div>
-      <div style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px">Experimental &nbsp;·&nbsp; Identifies the file by its name &nbsp;·&nbsp; shows nothing when unsure</div>
+      <div class="ep-headline" style="font-size:12px;font-weight:600;color:#fff">Automatic Lookup</div>
+      <div class="ep-helper" style="font-size:10px;color:rgba(255,255,255,.35);margin-top:2px">Experimental &nbsp;·&nbsp; Identifies the file by its name &nbsp;·&nbsp; shows nothing when unsure</div>
     </div>
     <label style="position:relative;display:inline-block;width:44px;height:26px;flex-shrink:0;margin-left:10px;cursor:pointer">
       <input type="checkbox" id="auto-toggle" style="opacity:0;width:0;height:0;position:absolute" onchange="doToggleAutoLookup(this.checked)" />
@@ -1237,6 +1370,8 @@ function showAutoMatch(info) {
   var verifiedSource = info.metadataSource==="TVmaze" ? "TVmaze" : "TMDB";
   stage.textContent = info.metadataPending ? "· Provisional identity (not verified)" : "· "+verifiedSource+" verified";
   stage.style.color = info.metadataPending ? "#a76b20" : "#1b9555";
+  // Keep explicit semantic state for Light Mode's readable, scoped CSS.
+  stage.setAttribute("data-pending", info.metadataPending ? "true" : "false");
   autoStatus(info.metadataPending ? "Episode recognized from playback filename · fetching metadata" : "Matched and verified via "+verifiedSource);
 }
 

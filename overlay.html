@@ -148,7 +148,7 @@
   #wrap[data-theme="glass"] .sn { color:rgba(255,255,255,0.62); margin-bottom:8px; }
   #wrap[data-theme="glass"] .et { font-size:30px; white-space:normal; margin-bottom:8px; }
   #wrap[data-theme="glass"] .mt { color:rgba(255,255,255,0.74); margin-bottom:10px; }
-  #wrap[data-theme="glass"] .ov { color:rgba(255,255,255,0.84); -webkit-line-clamp:3; font-size:15px; line-height:1.55; }
+  #wrap[data-theme="glass"] .ov { color:rgba(255,255,255,.94); -webkit-line-clamp:3; font-size:15.5px; line-height:1.55; font-weight:500; }
   /* Over a light poster the grey labels faded, so near-white text with a firmer shadow */
   #wrap[data-theme="glass"]:not([data-glass="clear"]) #text { text-shadow:0 1px 3px rgba(0,0,0,0.75), 0 0 10px rgba(0,0,0,0.3); }
   #wrap[data-theme="glass"]:not([data-glass="clear"]) .sn,
@@ -177,7 +177,7 @@
   .person b, .person i {
     display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
-  .person b { font-size:12.5px; font-weight:600; color:#fff; }
+  .person b { font-size:13px; font-weight:650; color:#fff; }
   .person i { font-style:normal; font-size:11.5px; color:rgba(255,255,255,0.62); }
   .next {
     display:inline-flex; align-items:center; gap:9px; margin-top:14px;
@@ -254,40 +254,203 @@
     .sn,.et,.mt,.ov { color:CanvasText !important; }
   }
 
-  /* Episode Info Plus Light/Dark compatibility with opt-in Glass. */
-  @media (prefers-color-scheme:light) {
+  /* Episode Info Plus: macOS Light and Dark use DIFFERENT glass materials.
+     Dark inherits its existing smoked-black card & white text unchanged.
+     Light uses a bright, translucent surface and opaque neutral dark text
+     (the same semantic approach as the Light sidebar / Trakt+).
+     The overlay is a separate IINA WebView and cannot sample video luminance;
+     protect readability on a near-black frame with a minimum light tint. */
+  @media (prefers-color-scheme: light) {
     #wrap[data-theme="glass"] #card {
-      background:transparent;border-color:rgba(255,255,255,.22);
+      background:transparent;
+      border:1px solid rgba(36,50,68,.20);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.35),
+                 0 17px 48px rgba(25,35,50,.20);
+      /* This may blur within the WebView, not across IINA's video layer. */
+      -webkit-backdrop-filter:blur(16px) saturate(115%);
+      backdrop-filter:blur(16px) saturate(115%);
     }
-    /* Use a dark fallback behind the poster, not a dark layer covering it. */
-    #wrap[data-theme="glass"] #art {background:rgba(12,14,20,.90);}
-    #wrap[data-theme="glass"] .et,#wrap[data-theme="glass"] .person b {color:#fff;}
-    #wrap[data-theme="glass"] .sn {color:rgba(255,255,255,.84);}
-    #wrap[data-theme="glass"] .mt,#wrap[data-theme="glass"] .ov,
-    #wrap[data-theme="glass"] .person i,#wrap[data-theme="glass"] .next,
-    #wrap[data-theme="glass"] .next .lbl {color:rgba(255,255,255,.90);}
-    #wrap[data-theme="glass"] .rat {color:#f5c518;}
-    #wrap[data-theme="glass"][data-glass="clear"] #card {
-      background:rgba(250,251,253,var(--bg-opacity));border-color:rgba(21,35,53,.15);
+    #wrap[data-theme="glass"] #art { background:rgba(243,247,252,.10); }
+    #wrap[data-theme="glass"] #art::before {
+      -webkit-filter:blur(40px) saturate(125%) brightness(108%);
+      filter:blur(40px) saturate(125%) brightness(108%);
     }
-    #wrap[data-theme="glass"][data-glass="clear"] .et,
-    #wrap[data-theme="glass"][data-glass="clear"] .person b {color:#142132;}
-    #wrap[data-theme="glass"][data-glass="clear"] .sn,
-    #wrap[data-theme="glass"][data-glass="clear"] .mt,
-    #wrap[data-theme="glass"][data-glass="clear"] .ov,
-    #wrap[data-theme="glass"][data-glass="clear"] .person i,
-    #wrap[data-theme="glass"][data-glass="clear"] .next,
-    #wrap[data-theme="glass"][data-glass="clear"] .next .lbl {color:#344559;}
-    #wrap[data-theme="glass"][data-glass="clear"] .rat {color:#8b5a00;}
-    #wrap[data-theme="glass"][data-glass="clear"] #card::before,
-    #wrap[data-theme="glass"][data-glass="clear"] #card::after {display:none;}
+    #wrap[data-theme="glass"][data-glass="colorful"] #art::before {
+      -webkit-filter:blur(34px) saturate(168%) brightness(114%);
+      filter:blur(34px) saturate(168%) brightness(114%);
+    }
+    /* LIGHT ONLY: native-style glass, ~14% light tint at Shade 57%.
+       Card shade is a translucent *background layer*, never an opacity
+       applied to content. Dedicated JS computes this for older WebKit. */
+    #wrap[data-theme="glass"] #card::before,
+    #wrap[data-theme="glass"][data-glass="colorful"] #card::before,
+    #wrap[data-theme="glass"][data-glass="clear"] #card::before {
+      display:block;
+      /* Uniform OSD-style neutral tint, no milky white or center patch. */
+      background:rgb(228,234,240);
+      opacity:var(--light-glass-opacity,.59);
+    }
+    /* The global white sheen was responsible for the milky appearance. */
+    #wrap[data-theme="glass"] #card::after,
+    #wrap[data-theme="glass"][data-glass="clear"] #card::after {
+      display:none;
+    }
+    /* beta.7: no local white cushion. It created a visible opaque rectangle
+       centered behind the episode title/synopsis/Cast. All content now sits
+       above ONE uniformly translucent card-wide light-glass film, exactly
+       like the Dark Mode layer structure, with independent light typography.
+       Do not reintroduce a separate text-zone background or filter. */
+    #wrap[data-theme="glass"] #text {
+      text-shadow:none;
+    }
+    #wrap[data-theme="glass"] #text::before {
+      content:none;
+      display:none;
+    }
+    #wrap[data-theme="glass"] .et,
+    #wrap[data-theme="glass"] .person b {
+      color:#17202b;
+      font-weight:700;
+    }
+    #wrap[data-theme="glass"] .sn,
+    #wrap[data-theme="glass"] .mt,
+    #wrap[data-theme="glass"] .ov,
+    #wrap[data-theme="glass"] .person i,
+    #wrap[data-theme="glass"] .next,
+    #wrap[data-theme="glass"] .next .lbl,
+    /* Base dark Frosted/Colorful rules use :not(...), so match their
+       specificity explicitly or white labels will leak into Light Mode. */
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .sn,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .mt,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .ov,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .person i,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .next,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .next .lbl {
+      color:#1a2531;
+      opacity:1;
+    }
+    #wrap[data-theme="glass"] .mt span+span::before {
+      color:#46566a;
+    }
+    #wrap[data-theme="glass"] .rat {color:#825300;}
+    #wrap[data-theme="glass"] .next {
+      color:#243449;
+      background:rgba(245,249,253,.48);
+      border-color:rgba(36,50,68,.20);
+    }
+    #wrap[data-theme="glass"] .next .lbl {color:#33445a;}
+    #wrap[data-theme="glass"] .person img {
+      box-shadow:0 0 0 1px rgba(36,50,68,.24);
+    }
+    /* beta.6: micro-typography inherits dark ink, never translucent ink.
+       All rules are scoped to LIGHT + Glass, leaving Dark/Classic unchanged. */
+    #wrap[data-theme="glass"] #text,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) #text {
+      text-shadow:none;
+    }
+    #wrap[data-theme="glass"] .sn,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .sn {
+      color:#293647;
+      font-size:13px;
+      font-weight:700;
+      letter-spacing:.13em;
+      line-height:1.4;
+      opacity:1;
+    }
+    #wrap[data-theme="glass"] .mt,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .mt {
+      color:#253345;
+      font-size:15px;
+      font-weight:550;
+      line-height:1.4;
+      opacity:1;
+    }
+    #wrap[data-theme="glass"] .ov,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .ov {
+      color:#243242;
+      font-size:15.5px;
+      font-weight:500;
+      line-height:1.58;
+      opacity:1;
+    }
+    #wrap[data-theme="glass"] .person b {
+      color:#192431;
+      font-weight:700;
+    }
+    #wrap[data-theme="glass"] .person i,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .person i {
+      color:#344354;
+      font-size:12.25px;
+      font-weight:550;
+      line-height:1.42;
+      opacity:1;
+    }
+    #wrap[data-theme="glass"] .next,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .next {
+      color:#273646;
+      font-size:12.5px;
+      font-weight:550;
+      line-height:1.4;
+      opacity:1;
+    }
+    #wrap[data-theme="glass"] .next .lbl,
+    #wrap[data-theme="glass"]:not([data-glass="clear"]) .next .lbl {
+      color:#344557;
+      font-size:11px;
+      font-weight:750;
+      letter-spacing:.11em;
+      opacity:1;
+    }
+    /* beta.9 — IINA-native OSD inspiration: clean glyphs on ONE even,
+       neutral translucent material. No strokes, multiple white shadows,
+       localized white panels or changing per-video colors. System controls
+       can use macOS NSVisualEffectView; an IINA HTML overlay cannot promise
+       to blur the actual video behind its separate WebView. */
+    #wrap[data-theme="glass"] .sn,
+    #wrap[data-theme="glass"] .et,
+    #wrap[data-theme="glass"] .mt,
+    #wrap[data-theme="glass"] .ov,
+    #wrap[data-theme="glass"] .person b,
+    #wrap[data-theme="glass"] .person i,
+    #wrap[data-theme="glass"] .next,
+    #wrap[data-theme="glass"] .rat {
+      -webkit-text-stroke:0;
+      text-shadow:none;
+      -webkit-font-smoothing:antialiased;
+    }
+    #wrap[data-theme="glass"] .et,
+    #wrap[data-theme="glass"] .person b { color:#101820; }
+    #wrap[data-theme="glass"] .sn,
+    #wrap[data-theme="glass"] .mt,
+    #wrap[data-theme="glass"] .ov,
+    #wrap[data-theme="glass"] .person i,
+    #wrap[data-theme="glass"] .next {
+      color:#17202b;
+    }
+    #wrap[data-theme="glass"] .person i {
+      font-size:12.5px;
+      font-weight:550;
+      line-height:1.45;
+    }
+    #wrap[data-theme="glass"] .next {
+      background:rgba(240,245,249,.68);
+      border-color:rgba(36,50,68,.18);
+    }
+    #wrap[data-theme="glass"] .next .lbl { color:#223244; }
+    #wrap[data-theme="glass"] .rat { color:#825300; }
     #wrap:not([data-theme="glass"]) .person b {color:#142132;}
     #wrap:not([data-theme="glass"]) .person i {color:#45576b;}
-    #wrap:not([data-theme="glass"]) .next {color:#344559;background:rgba(21,35,53,.08);border-color:rgba(21,35,53,.15);}
+    #wrap:not([data-theme="glass"]) .next {
+      color:#344559;background:rgba(21,35,53,.08);
+      border-color:rgba(21,35,53,.15);
+    }
     #wrap:not([data-theme="glass"]) .next .lbl {color:#53667e;}
   }
   @media(prefers-contrast:more) {
     #wrap[data-theme="glass"] #card {background:Canvas !important;}
+    #wrap[data-theme="glass"] #card::before,
+    #wrap[data-theme="glass"] #card::after {display:none !important;}
+    #wrap[data-theme="glass"] #text {text-shadow:none !important;}
     #wrap[data-theme="glass"] .sn,#wrap[data-theme="glass"] .et,
     #wrap[data-theme="glass"] .mt,#wrap[data-theme="glass"] .ov,
     #wrap[data-theme="glass"] .person b,#wrap[data-theme="glass"] .person i,
@@ -345,11 +508,23 @@ function applyVerticalPos(v) {
   }
 }
 
+// Dark uses the unmodified --bg-opacity variable. The separate Light
+// glass background uses a moderate, even OSD-like fraction of Shade.
+// Avoid CSS calc multiplication: older IINA WebKit builds may ignore it.
+function applyBackgroundShade(value) {
+  var v=Number(value);
+  if (!Number.isFinite(v)) return;
+  v=Math.max(0,Math.min(1,v));
+  document.documentElement.style.setProperty("--bg-opacity",v);
+  document.documentElement.style.setProperty("--light-glass-opacity",
+    Math.max(.45,Math.min(.70,.45+v*.25)));
+}
+
 // Episode data from main.js
 iina.onMessage("showData", function(d) {
   // Update background shade first
   if (typeof d.bgOpacity === "number") {
-    document.documentElement.style.setProperty("--bg-opacity", d.bgOpacity);
+    applyBackgroundShade(d.bgOpacity);
   }
 
   // Apply vertical position
@@ -410,7 +585,7 @@ iina.onMessage("showData", function(d) {
 // Live opacity from the sidebar
 iina.onMessage("setBgOpacity", function(d) {
   if (typeof d.value === "number") {
-    document.documentElement.style.setProperty("--bg-opacity", d.value);
+    applyBackgroundShade(d.value);
   }
 });
 
