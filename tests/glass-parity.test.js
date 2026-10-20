@@ -4,8 +4,8 @@ const fs=require("node:fs"),vm=require("node:vm"),path=require("node:path");
 const overlay=fs.readFileSync(path.resolve(__dirname,"../overlay.html"),"utf8");
 const sidebar=fs.readFileSync(path.resolve(__dirname,"../sidebar.html"),"utf8");
 const info=require("../Info.json");
-assert.equal(info.version,"1.3.3-beta.7");
-assert.equal(info.ghVersion,21);
+assert.equal(info.version,"1.3.3-beta.8");
+assert.equal(info.ghVersion,22);
 assert(sidebar.includes("--ep-ink:#1f2023"));
 assert(sidebar.includes("color:var(--ep-text); background:transparent"));
 const mark="/* Episode Info Plus: macOS Light and Dark use DIFFERENT glass materials.";
@@ -100,4 +100,29 @@ assert(!dark.includes("/* beta.6: micro-typography"),"Dark styling must not chan
 assert(!light.includes("background:rgba(250,251,253,var(--bg-opacity))"),
  "No new opaque full-Glass background allowed");
 
-console.log("beta.7 uniform Light Glass (central haze removed), microtype, rating and untouched Dark baseline PASS");
+// On deep-brown/near-black moving footage thin Light glass cannot protect
+// pure dark ink. Test a constrained outline directly on glyphs — NOT
+// another opaque center-zone blur or a global change to Shade.
+const edgeStart=light.indexOf("/* beta.8 — GLYPH-LEVEL contrast");
+assert(edgeStart>0,"Missing explicit Light-only glyph edge controls");
+const edges=light.slice(edgeStart);
+for(const t of [
+ '-webkit-text-stroke:.35px rgba(249,251,255,.86)',
+ '-webkit-text-stroke:.65px rgba(249,251,255,.92)',
+ '0 -1px 0 rgba(249,251,255,.84)',
+ '.person i {',
+ 'font-weight:650',
+ '#wrap[data-theme="glass"] .next {',
+ '-webkit-text-stroke:0',
+ 'text-shadow:none'
+])assert(edges.includes(t),"Missing edge contrast / Cast readability rule "+t);
+assert(!dark.includes("beta.8 — GLYPH-LEVEL"),
+ "Dark styling must remain untouched");
+assert(!light.includes('background:rgba(245,249,253,.52)') &&
+ !light.includes('filter:blur(11px)'),
+ "A white or blurred local text scrim would restore central haze");
+assert(light.includes("opacity:var(--light-glass-opacity,.16)"),
+ "Light transparent whole-panel film must remain unchanged");
+assert(!edges.includes("backdrop-filter"),
+ "Glyph contrast must never apply additional card-wide filters");
+console.log("beta.8 Light glyph readability, uniform translucent glass, Dark baseline and matching isolation: PASS");

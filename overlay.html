@@ -400,6 +400,50 @@
       letter-spacing:.11em;
       opacity:1;
     }
+    /* beta.8 — GLYPH-LEVEL contrast, not a text-zone background.
+       Light Glass is deliberately thin and dark footage can be almost
+       black behind it. A crisp pearlescent 1px edge around individual glyphs
+       makes dark ink recognizable on both bright and dark frames, without
+       reintroducing any rectangle, masked scrim or blur in the card center.
+       Keep the Light-only selector: Dark Glass is already approved. */
+    #wrap[data-theme="glass"] .sn,
+    #wrap[data-theme="glass"] .et,
+    #wrap[data-theme="glass"] .mt,
+    #wrap[data-theme="glass"] .ov,
+    #wrap[data-theme="glass"] .person b,
+    #wrap[data-theme="glass"] .person i,
+    #wrap[data-theme="glass"] .next {
+      -webkit-text-stroke:.35px rgba(249,251,255,.86);
+      text-shadow:0 1px 0 rgba(249,251,255,.92),
+                  0 -1px 0 rgba(249,251,255,.84),
+                  1px 0 0 rgba(249,251,255,.60),
+                 -1px 0 0 rgba(249,251,255,.60);
+    }
+    #wrap[data-theme="glass"] .et {
+      -webkit-text-stroke:.65px rgba(249,251,255,.92);
+      text-shadow:0 1px 0 rgba(249,251,255,.96),
+                  0 -1px 0 rgba(249,251,255,.90),
+                  1px 0 0 rgba(249,251,255,.75),
+                 -1px 0 0 rgba(249,251,255,.75);
+    }
+    /* Small cast roles must remain distinct from the actor's name. */
+    #wrap[data-theme="glass"] .person i {
+      color:#273442;
+      font-size:12.5px;
+      font-weight:650;
+    }
+    /* Up Next is already backed by its own light pill; avoid double edging. */
+    #wrap[data-theme="glass"] .next {
+      -webkit-text-stroke:0;
+      text-shadow:none;
+      background:rgba(245,249,253,.60);
+      border-color:rgba(36,50,68,.22);
+    }
+    /* Rating is a distinct amber foreground, not dark text. */
+    #wrap[data-theme="glass"] .rat {
+      -webkit-text-stroke:0;
+      text-shadow:0 1px 0 rgba(249,251,255,.82);
+    }
     #wrap:not([data-theme="glass"]) .person b {color:#142132;}
     #wrap:not([data-theme="glass"]) .person i {color:#45576b;}
     #wrap:not([data-theme="glass"]) .next {

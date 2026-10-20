@@ -8,6 +8,10 @@ Maintained as an independent fork of [Zain Imam's Episode Info](https://github.c
 
 ## Episode Info Plus features
 
+**v1.3.3-beta.8 (Light Glass glyph contrast):** Replaces the lost per-text contrast after beta.7 removed its opaque center scrim with *glyph-level* pearlescent edge separation. Light titles, synopsis, metadata and cast roles retain dark native-ink fill but receive narrow crisp light edges so they are identifiable over the dark footage that can show through the low-alpha Glass. No text-column background, white blur rectangle, or extra full-card opacity is reintroduced. The Up Next pill stays a controlled surface; the rating remains amber. Light sidebar, all Dark Mode styling, runtime matching and network code remain unchanged. This is a visual beta; validate on IINA/macOS with both a dark and light scene before promotion.
+
+
+
 **v1.3.3-beta.7 (uniform Light Glass):** Removes the 52%-white blurred `#text::before` cushion behind the overlay's center column. That extra layer was responsible for the visibly opaque/milky patch compared with Dark Mode. Light now has one continuous low-alpha background film (unchanged Shade mapping from beta.5), no text-specific background or blur, and retains the high-contrast opaque micro-typography introduced in beta.6. Dark Mode, sidebar styling, Glass variants, metadata, Trakt+ and stored preferences are unchanged. Visual checking against both a bright and dark IINA scene is required before Stable.
 
 
