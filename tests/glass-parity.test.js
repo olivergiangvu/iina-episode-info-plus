@@ -23,7 +23,9 @@ assert(!sidebar.includes("background:rgba(248,249,252,.96)"),
  "Opaque sidebar light background must not hide IINA's native material");
 assert(sidebar.includes("color:var(--ep-text); background:transparent"),
  "Native sidebar background must remain transparent");
-assert(/data-glass="clear"\]\s+#card\s*\{\s*background:rgba\(248,251,253,calc\(var\(--bg-opacity\) \* \.46\)\)/.test(overlay),
+assert(overlay.includes("background:rgba(248,251,253,.33)"),
+ "Fallback alpha must remain transparent on older WebKit builds");
+assert(overlay.includes("background:rgba(248,251,253,calc(var(--bg-opacity) * .46))"),
  "Clear light glass must follow Shade at a reduced tint alpha");
 // The baseline Classic/Poster card deliberately keeps full Shade opacity;
 // only the Glass Clear-specific selector must use a reduced alpha.

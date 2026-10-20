@@ -273,6 +273,8 @@
        A white 0.72 layer looked nearly opaque compared with Dark Mode.
        IINA's separate overlay WebView cannot blur the moving video itself. */
     #wrap[data-theme="glass"][data-glass="clear"] #card {
+      /* Safe default for older WebKit builds lacking calc multiplication. */
+      background:rgba(248,251,253,.33);
       background:rgba(248,251,253,calc(var(--bg-opacity) * .46));
       border-color:rgba(21,35,53,.20);
       -webkit-backdrop-filter:blur(14px) saturate(130%);
