@@ -33,6 +33,7 @@ jobs:
       - name: Run matching and interface regression tests
         run: |
           node tests/episode-plus-identity.test.js
+          node tests/mystic-nine-autolookup.test.js
           node tests/upstream-134-integration.test.js
           node tests/upstream-135-integration.test.js
           node tests/upstream-135-ui-integration.test.js
