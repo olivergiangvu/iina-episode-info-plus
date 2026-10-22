@@ -1227,6 +1227,13 @@ async function alMatchTv(p, seconds, opts) {
   if (fits.length && unresolved) return alNotSure(unresolved, p.title);
   if (fits.length === 1) return { info: fits[0].info, query: p.title };
   if (fits.length > 1) {
+    // Votes must not silently decide between a remake and an older show
+    // with the same title/S/E when the filename supplies no year.
+    if (p.year == null && p.episodeYear == null) {
+      var airYears = fits.map(function(x) { return alYearOf(x.info.airDate); }).filter(Boolean);
+      if (airYears.length > 1 && airYears.some(function(y) { return y !== airYears[0]; }))
+        return alNotSure("several shows called “" + p.title + "” fit in different years", p.title);
+    }
     var top = alDominant(fits);
     return top ? { info: top.info, query: p.title } : alNotSure("several shows called “" + p.title + "” fit", p.title);
   }
