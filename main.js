@@ -1,4 +1,4 @@
-// IINA Plugin: Episode Info Plus v1.3.3
+// IINA Plugin: Episode Info Plus v1.3.4-beta.1
 
 const { core, event, utils, file, menu } = iina;
 const episodePlusIdentity = require("./episode-plus-identity.js");
@@ -68,7 +68,7 @@ function withTimeout(p, ms, label) {
 var HTTP_TIMEOUT_MS = 10000; // per-call budget
 
 // OpenSubtitles needs a User-Agent like "AppName vX.Y.Z" or it throttles requests
-var OS_USER_AGENT = "EpisodeInfo v1.3.3";
+var OS_USER_AGENT = "EpisodeInfo v1.3.4-beta.1";
 
 // Lazy IMDB id resolver: show-level and episode-level ids from TMDB
 async function resolveImdbIds(d, tmdbKey) {
