@@ -701,7 +701,7 @@ function alFirstCut(s, from) {
 
 // A release or file name taken apart. Never throws.
 function alParseName(raw) {
-  var r = { title: "", year: null, season: null, episode: null, episodes: 1, episodeTitle: "",
+  var r = { title: "", year: null, episodeYear: null, season: null, episode: null, episodes: 1, episodeTitle: "",
             country: null, lead: false, dash: false, dated: false, extra: false, seasonWords: false, tagged: false };
   var s = String(raw == null ? "" : raw).replace(AL_VIDEO_EXT, "");
   s = s.replace(/^\s*(?:\[[^\]]{0,60}\]\s*|【[^】]{0,60}】\s*)+/, "");
@@ -735,6 +735,15 @@ function alParseName(raw) {
       if (mark < 0 || eo.index < mark) mark = eo.index;
       markEnd = Math.max(markEnd, eo.index + eo[0].length);
     }
+  }
+
+  // A year immediately AFTER SxxExx is an episode/release-year hint, not
+  // necessarily the show's premiere year (e.g. Fallout S02E07 2026).
+  // Keep it separate so TMDB checks the selected episode's actual air date.
+  if (r.season != null && r.episode != null && markEnd >= 0) {
+    var yearTail = /^\s+((?:19|20)\d{2})(?=\s|$)/.exec(s.slice(markEnd));
+    var maxEpisodeYear = new Date(Date.now()).getFullYear() + 1;
+    if (yearTail && +yearTail[1] <= maxEpisodeYear) r.episodeYear = +yearTail[1];
   }
 
   // Year: the last plausible one before the episode or quality tags ("1917" alone is a title)
@@ -779,7 +788,10 @@ function alParseName(raw) {
 
   var tailAt = markEnd >= 0 ? alFirstCut(s, markEnd) : qc;
   if (markEnd >= 0) {
-    r.episodeTitle = s.slice(markEnd, tailAt >= 0 ? tailAt : s.length).replace(/^[\s\-–—:]+|[\s\-–—:]+$/g, "");
+    var episodeTail = s.slice(markEnd, tailAt >= 0 ? tailAt : s.length);
+    // A standalone post-S/E year is not an episode title.
+    if (r.episodeYear != null) episodeTail = episodeTail.replace(/^\s+(?:19|20)\d{2}(?=\s|$)/, "");
+    r.episodeTitle = episodeTail.replace(/^[\s\-–—:]+|[\s\-–—:]+$/g, "");
   }
   // Episode titles may contain any word ("The Opening"); everything else may not.
   var checked = r.episode != null ? r.title + " " + (tailAt >= 0 ? s.slice(tailAt) : "") : s;
@@ -1198,6 +1210,17 @@ async function alMatchTv(p, seconds, opts) {
       ep = sd ? sd.episodes.filter(function(e) { return e.n === p.episode; })[0] : null;
     }
     if (!ep) { why = "“" + d.name + "” has no S" + alPad2(season) + "E" + alPad2(p.episode); continue; }
+    // Do not select a similarly named older/newer show solely by popularity.
+    // When the filename supplies an episode year, verify it against the
+    // episode air date. Unknown dates stay unresolved rather than guessed.
+    if (p.episodeYear != null && !alYearOf(ep.air)) {
+      unresolved = "TMDB has no air year to verify S" + alPad2(season) + "E" + alPad2(p.episode);
+      continue;
+    }
+    if (p.episodeYear != null && alYearOf(ep.air) !== p.episodeYear) {
+      why = "the episode air year doesn't match the filename's " + p.episodeYear;
+      continue;
+    }
     if (!alLengthFits(seconds, ep.runtime, p.episodes)) { why = "the video's length doesn't match the episode"; continue; }
     fits.push({ votes: d.votes, info: alTvInfo(d, sd, ep, season) });
   }
@@ -1416,7 +1439,10 @@ async function alLookup(h, seconds) {
   var primary = usable[0];
   if (!primary) {
     var named = readings.filter(function(rd) { return alTitleOk(rd.p); })[0];
-    return alNotSure("there is no usable name", named ? named.p.title : "");
+    var missing = alNotSure("there is no usable name", named ? named.p.title : "");
+    missing.diagnostics = { candidateSource: "none", parsedYear: null,
+      tmdbMatch: "rejected", rejectReason: missing.reason };
+    return missing;
   }
   var p = primary.p;
   for (var i = 1; i < usable.length; i++) {
@@ -1440,6 +1466,13 @@ async function alLookup(h, seconds) {
     }catch(e){ log("Episode Info Plus conservative second try: "+errStr(e)); }
   }
   if (out.info) out.from = primary.from;
+  // Only safe, non-tokenized fields for debugging failed Automatic Lookup.
+  out.diagnostics = {
+    candidateSource: primary.source || "unknown",
+    parsedYear: p.year || p.episodeYear || null,
+    tmdbMatch: out.info ? "verified" : "rejected",
+    rejectReason: out.info ? "" : (out.reason || "")
+  };
   // Preserve S/E only as a manual-search navigation hint; never as proof
   // of series identity or a trigger for unattended scrobbling.
   else if (p.season != null && p.episode != null) {
@@ -1523,6 +1556,8 @@ async function autoLookup(d) {
   try {
     var out=await alLookup(alHints(),alSeconds);
     reply.info=out.info||null;reply.query=out.query||"";reply.reason=out.reason||"";
+    reply.diagnostics=out.diagnostics||null;
+    if (reply.diagnostics) iina.console.log("[EpInfo] Automatic Lookup: "+JSON.stringify(reply.diagnostics));
     if(!reply.info && out.season!=null && out.episode!=null){
       reply.season=out.season;reply.episode=out.episode;
     }
@@ -1542,6 +1577,9 @@ async function autoLookup(d) {
   }catch(e){
     tmdbFailureKind="request-failed";
     reply.reason="TMDB request failed ("+errStr(e)+")";
+    reply.diagnostics={candidateSource:"unknown",parsedYear:null,
+      tmdbMatch:"request-failed",rejectReason:reply.reason};
+    iina.console.log("[EpInfo] Automatic Lookup: "+JSON.stringify(reply.diagnostics));
   }
   // Do not reclassify a "not found" network exception as nonexistent media.
   // Use a distinct source if TMDB cannot confirm the episode.
