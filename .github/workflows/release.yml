@@ -31,6 +31,7 @@ jobs:
           node --check episode-plus-http.js
           node --check episode-plus-aios.js
           node tests/episode-plus-identity.test.js
+          node tests/mystic-nine-autolookup.test.js
           node tests/upstream-134-integration.test.js
           node tests/upstream-135-integration.test.js
           node tests/upstream-135-ui-integration.test.js
