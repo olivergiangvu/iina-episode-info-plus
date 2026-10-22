@@ -1473,6 +1473,11 @@ async function alLookup(h, seconds) {
     }catch(e){ log("Episode Info Plus conservative second try: "+errStr(e)); }
   }
   if (out.info) out.from = primary.from;
+  // Preserve S/E only as a manual-search navigation hint; never as proof
+  // of series identity or a trigger for unattended scrobbling.
+  else if (p.season != null && p.episode != null) {
+    out.season=p.season; out.episode=p.episode;
+  }
   // Only safe, non-tokenized fields for debugging failed Automatic Lookup.
   out.diagnostics = {
     candidateSource: primary.source || "unknown",
@@ -1480,11 +1485,6 @@ async function alLookup(h, seconds) {
     tmdbMatch: out.info ? "verified" : "rejected",
     rejectReason: out.info ? "" : (out.reason || "")
   };
-  // Preserve S/E only as a manual-search navigation hint; never as proof
-  // of series identity or a trigger for unattended scrobbling.
-  else if (p.season != null && p.episode != null) {
-    out.season=p.season; out.episode=p.episode;
-  }
   return out;
 }
 
