@@ -1,36 +1,41 @@
-# EP+ Native Now Playing Proof of Concept (opt-in)
+# EP+ Native Now Playing automatic PoC (v1.3.4-beta.3)
 
-Branch: feature/now-playing-poc. Version: 1.3.4-beta.2, not a stable release.
+Branch: `feature/now-playing-poc`. This is a **beta-only** experiment.
+Stable v1.3.3 remains untouched on `main`.
 
-## Goal
-Enrich the **existing IINA** Now Playing session with the confirmed EP+ movie/episode title and poster. IINA continues owning play/pause/seek/progress. No helper, macOS background process or new session.
+## Activation
+After replacing EP+ with this beta, **no menu action is needed**. Open a new movie/episode in IINA. When EP+ emits `episodeSelected` with a TMDB ID, a non-provisional match and a supported poster URL, the plugin automatically downloads that already-verified poster and passes the image to mpv as an external albumart track. It also sets a per-file compact title.
 
-## How it works
-1. Play a video in IINA and let EP+ resolve a poster.
-2. IINA menu **Plugins → Episode Info Plus → Now Playing — Test EP+ Title & Poster** (menu placement varies).
-3. The plugin downloads only the EP+ poster from the allowlisted TMDB/TVmaze image host into its temporary folder.
-4. Set **file-local-options/force-media-title** to a compact title.
-5. Call `mpv video-add <local-image> auto+attached-picture` to expose an external `albumart` video track.
-6. IINA's existing track-list handling should refresh MPNowPlayingInfoCenter with title and cover.
+The macOS menu is **Plugin** (singular). IINA 1.5.0 shows plugin names as section headers and their menu items under that header, not in a dedicated submenu. This build intentionally has no manual Now Playing test item.
 
-## Safety and limits
-- **Manual one-shot only**, not automatic. A new media file must be opened before repeating a test.
-- No modifications to the stable branch or existing plugin storage.
-- No privileged shell command, no tokenized playback URL is logged.
-- Local title resets when file playback ends (mpv per-file options).
-- External picture should not replace the selected video track; the probe checks and attempts to restore the original track.
-- Streaming seeks/duration/playback state remain IINA-native.
-- This DOES NOT add custom movie/TV metadata fields to MediaPlayer; IINA v1.5.0's video NowPlayingInfoManager writes title as a single field. Film/season/episode details are combined in title.
-- IINA does not expose a plugin API to clear its already-promoted front-cover artwork immediately. Exit the current media to reset after testing.
-- This branch has not yet been run on the user's Mac. A pass requires on-device verification of both mpv `albumart` track and artwork displayed in Control Center.
+## Data flow
+```
+AIOStreams → IINA playback ← EP+ verified TMDB metadata
+                               ↓
+                     poster image → @tmp
+                               ↓
+                 mpv video-add auto+attached-picture
+                               ↓
+            IINA native NowPlayingInfoManager
+                               ↓
+                  macOS Control Center
+```
 
-## Acceptance checklist
-- Cover matches episode or film and is not the IINA icon.
-- Title contains correct show, season, episode and episode title.
-- Media play/pause/seek still controls IINA.
-- Selected video track, audio and subtitles remain unchanged.
-- Switching to a new file clears prior artwork.
-- Existing Trakt+, Companion and EP+ overlay functions still work.
+## Safety and scope
+- One automatic attempt per playback URL, duplicate `episodeSelected` messages are coalesced while downloading.
+- No global media-title changes, no shell helper, no new native media session, no changes to existing Trakt+/Companion logic.
+- Only URLs under TMDB/TVmaze known poster image hosts are downloaded; no playback tokens are logged.
+- Provisional identity and unknown TMDB ID are ignored.
+- A cleared episode invalidates a pending download, and changing media invalidates previous asynchronous requests.
+- The code checks that `vid` stays on its previous selection; if it changes, it attempts restoration.
+- **Limit:** after a successful injection, same-file metadata correction is not automatically reapplied. Re-open the media during this PoC to retest.
+- IINA's v1.5.0 Now Playing video metadata only exposes a single title, not distinct episode metadata fields.
 
-## Diagnostic
-IINA's logs are under `~/Library/Logs/com.colliderli.iina/`. Check messages containing `Now Playing POC`, `Now Playing`, `front cover artwork`, `external artwork file` or `Track list changed`. Never share raw stream URLs or authentication parameters publicly.
+## On-device acceptance
+1. Open a new media item and wait until EP+ displays **TMDB verified**.
+2. macOS Control Center → Now Playing must show the downloaded poster and descriptive title.
+3. Play/pause, seeking, subtitles, stream playback, EP+ overlay and Trakt+ must remain functional.
+4. In IINA logging, look for `Now Playing POC:` and `Found front cover artwork`.
+5. If the artwork remains the IINA app icon, inspect whether mpv registered an albumart track before making further changes.
+
+Rollback: install [v1.3.3 stable](https://github.com/olivergiangvu/iina-episode-info-plus/releases) through IINA, using the same plugin identifier.
