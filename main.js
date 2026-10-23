@@ -1,4 +1,4 @@
-// IINA Plugin: Episode Info Plus v1.3.4-beta.2 (Now Playing POC)
+// IINA Plugin: Episode Info Plus v1.3.4-beta.3 (Now Playing auto-sync POC)
 
 const { core, event, utils, file, menu } = iina;
 const episodePlusIdentity = require("./episode-plus-identity.js");
@@ -1702,11 +1702,19 @@ function registerSidebarHandlers() {
     log("episodeSelected: " + (info ? info.epTitle : "null"));
     currentEpisode = info;
     resolveSegments(info);
+    // Native IINA Now Playing proof of concept: reuse the ALREADY verified
+    // EP+ metadata; never resolve a title again or start another media session.
+    if (info && info.metadataPending !== true && info.posterUrl && info.tmdbId) {
+      nowPlayingProbe.tryCurrent(info).catch(function(e) {
+        iina.console.log("[EpInfo] Now Playing auto POC failed: " + errStr(e));
+      });
+    }
     // No extra TMDB calls unless Cast/Up Next were explicitly enabled.
     if ((cardCast || cardNext) && info) loadCardExtras(info).catch(function(e){ });
   });
 
   sidebar.onMessage("clearEpisode", function() {
+    nowPlayingProbe.invalidate();
     cardExtras={key:"",cast:null,next:null};
     currentEpisode = null;
     segments = [];
@@ -2464,14 +2472,8 @@ try {
   iina.console.log("[EpInfo] menu item failed: " + errStr(e));
 }
 
-// Opt-in, one-shot: no automatic changes to playback or Now Playing.
-try {
-  menu.addItem(menu.item("Now Playing — Test EP+ Title & Poster", function() {
-    nowPlayingProbe.tryCurrent(currentEpisode).catch(function(e) {
-      iina.console.log("[EpInfo] Now Playing POC: " + errStr(e));
-    });
-  }));
-} catch(e) { iina.console.log("[EpInfo] Now Playing menu failed: " + errStr(e)); }
+// This beta uses an automatic POC triggered by verified episodeSelected.
+// No manual menu action is necessary.
 
 // Events
 event.on("iina.window-loaded", function() {
