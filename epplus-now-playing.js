@@ -1,15 +1,17 @@
 "use strict";
-// One-shot, opt-in proof of concept. Never creates a second macOS media session.
+// Verified-metadata, one-shot-per-file automatic proof of concept.
+// Never creates a second macOS media session.
 // The file-local title is automatically restored by mpv at end of playback.
 function createNowPlayingProbe(deps) {
   var iina = deps.iina, core = deps.core, utils = deps.utils, log = deps.log;
-  var generation = 0, testedUrl = null;
+  var generation = 0, testedUrl = null, pendingUrl = null;
   function safeUrl() {
     try { return String(core.status.url || ""); } catch (_) { return ""; }
   }
   function invalidate() {
     generation += 1;
     testedUrl = null;
+    pendingUrl = null;
   }
   function titleFor(info) {
     if (info.isMovie) {
@@ -41,10 +43,8 @@ function createNowPlayingProbe(deps) {
       log("Now Playing POC: no active playback or title.");
       return false;
     }
-    if (testedUrl === playbackUrl) {
-      log("Now Playing POC: already applied to this file; open another file to retest.");
-      return false;
-    }
+    if (testedUrl === playbackUrl || pendingUrl === playbackUrl) return false;
+    pendingUrl = playbackUrl;
     var ticket = ++generation;
     var tempPath = "@tmp/epplus-now-playing-" + Date.now() + "-" + ticket + ".jpg";
     log("Now Playing POC: downloading EP+ poster to plugin temporary storage.");
@@ -52,6 +52,7 @@ function createNowPlayingProbe(deps) {
       await deps.withTimeout(iina.http.download(info.posterUrl, tempPath), 12000, "Now Playing poster");
       // A new file or a superseding test must never receive stale artwork.
       if (ticket !== generation || safeUrl() !== playbackUrl) return false;
+      pendingUrl = null;
       if (!utils || typeof utils.resolvePath !== "function") {
         throw new Error("IINA utils.resolvePath is unavailable");
       }
@@ -88,6 +89,7 @@ function createNowPlayingProbe(deps) {
       }, 850);
       return true;
     } catch (e) {
+      if (ticket === generation) pendingUrl = null;
       log("Now Playing POC failed: " + (e && e.message ? e.message : String(e)));
       return false;
     }
