@@ -1135,9 +1135,16 @@ function alLengthFits(seconds, minutes, count) {
 
 // Search results whose title (or original or alternative title) is the name.
 async function alTitleCandidates(kind, list, title) {
-  var out = list.slice(0, 10).filter(function(x) { return alTitleMatches(title, [x.name, x.original]); });
+  // Only inspect a bounded, complete search page. The API can rank a show
+  // indexed under its alternate title below the first three results.
+  if (!Array.isArray(list) || list.length >= 20) return [];
+  var out = list.slice(0, 10).filter(function(x) {
+    return alTitleMatches(title, [x.name, x.original]);
+  });
   if (out.length) return out;
-  for (var i = 0; i < Math.min(3, list.length); i++) {
+  // Provider-backed alternative titles are proof; fuzzy scores alone aren't.
+  // Do not accept an alias candidate without reading its canonical record.
+  for (var i = 0; i < Math.min(8, list.length); i++) {
     var d = kind === "tv" ? await alTvDetails(list[i].id) : await alMovieDetails(list[i].id);
     if (d && alTitleMatches(title, d.alt)) out.push(list[i]);
   }
