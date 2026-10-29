@@ -707,6 +707,12 @@ function alParseName(raw) {
   s = s.replace(/^\s*(?:\[[^\]]{0,60}\]\s*|【[^】]{0,60}】\s*)+/, "");
   s = s.replace(/^\s*www\.\S+?\s*[-–—:]?\s+/i, "");
   s = s.replace(/^\s*[a-z0-9-]{2,40}\.(?:com|net|org|to|me|cc|tv|io|se|ru|xyz|info|site|club|lol|vip|co|in)\s+[-–—]\s+/i, "");
+  // Structured IINA HLS labels use middle dots as field separators:
+  // "City of Splendour · S01E01 · Episode 1".
+  // Only normalize dots surrounding an explicit S/E token; never change
+  // punctuation elsewhere in a real title.
+  s = s.replace(/\s+[·•]\s+(?=[Ss]\d{1,2}\s?[Ee]\d{1,4}\b)/g, " ")
+       .replace(/(\b[Ss]\d{1,2}\s?[Ee]\d{1,4}\b)\s+[·•]\s+/g, "$1 - ");
   s = alSeparators(s);
   if (!s) return r;
 
