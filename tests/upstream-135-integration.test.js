@@ -20,6 +20,7 @@ const lookup=section("async function alLookup(h, seconds) {","\nfunction alHints
 const rawParser=section("var AL_VIDEO_EXT = ","// TMDB, cached");
 const ctx=vm.createContext({
   episodePlusAios:require("../episode-plus-aios.js"),
+  trustedSeriesAliases:require("../trusted-series-aliases.js"),
   alNotSure:function(reason,query){return {info:null,reason,query:query||""}},
   alNorm:function(x){return String(x||"").toLowerCase().replace(/[^a-z0-9]+/g,"")},
   alYearOf:function(x){return Number(String(x||"").slice(0,4))||0},
