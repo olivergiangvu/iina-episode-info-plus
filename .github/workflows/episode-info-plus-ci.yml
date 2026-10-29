@@ -1,7 +1,7 @@
 name: Episode Info Plus CI
 on:
   push:
-    branches: [main, episode-info-plus-import, 'fix/epplus-verified-external-title-registry']
+    branches: [main, episode-info-plus-import, 'fix/epplus-verified-external-title-registry', 'fix/epplus-beta4-now-playing-poster']
     paths:
       - Info.json
       - main.js
@@ -11,11 +11,12 @@ on:
       - episode-plus-tvmaze.js
       - episode-plus-http.js
       - episode-plus-aios.js
+      - epplus-now-playing.js
       - trusted-series-aliases.js
       - tests/**
       - .github/workflows/episode-info-plus-ci.yml
   pull_request:
-    branches: [main]
+    branches: [main, 'fix/epplus-verified-external-title-registry']
   workflow_dispatch:
 permissions:
   contents: read
@@ -31,10 +32,12 @@ jobs:
           node --check episode-plus-tvmaze.js
           node --check episode-plus-http.js
           node --check episode-plus-aios.js
+          node --check epplus-now-playing.js
           node --check trusted-series-aliases.js
       - name: Run matching and interface regression tests
         run: |
           node tests/episode-plus-identity.test.js
+          node tests/now-playing-poster.test.js
           node tests/hls-alternative-title.test.js
           node tests/hls-reviewed-identity.test.js
           node tests/mystic-nine-autolookup.test.js
@@ -47,7 +50,7 @@ jobs:
           node -e 'const a=require("./Info.json");if(!Number.isInteger(a.ghVersion)||a.ghRepo!=="olivergiangvu/iina-episode-info-plus")process.exit(1)'
           mkdir -p dist
           V="$(node -p 'require("./Info.json").version')"
-          zip -q -r "dist/Episode-Info-Plus-$V.iinaplgz" Info.json main.js episode-plus-identity.js episode-plus-tvmaze.js episode-plus-http.js episode-plus-aios.js trusted-series-aliases.js sidebar.html overlay.html LICENSE
+          zip -q -r "dist/Episode-Info-Plus-$V.iinaplgz" Info.json main.js episode-plus-identity.js episode-plus-tvmaze.js episode-plus-http.js episode-plus-aios.js epplus-now-playing.js trusted-series-aliases.js sidebar.html overlay.html LICENSE
           unzip -t "dist/Episode-Info-Plus-$V.iinaplgz"
       - uses: actions/upload-artifact@v4
         with:
