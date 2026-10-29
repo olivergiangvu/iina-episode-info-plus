@@ -1,7 +1,7 @@
 name: Episode Info Plus CI
 on:
   push:
-    branches: [main, episode-info-plus-import]
+    branches: [main, episode-info-plus-import, 'fix/epplus-verified-external-title-registry']
     paths:
       - Info.json
       - main.js
