@@ -21,7 +21,7 @@ const context=vm.createContext({
  alHints:()=>({...playback}),
  alParseName:title=>({title:"Parallel World",season:1,episode:2}),
  alTitleOk:()=>true,
- alTvDetails:async()=>mismatched?{...show,imdb:"tt87654321"}:show,
+ alTvDetails:async()=>mismatched?{...show,id:33333}:show,
  alSeason:async()=>({episodes:[{n:2,runtime:43}]}),
  alYearOf:date=>+String(date).slice(0,4),
  alLengthFits:(secs,mins)=>secs/60>=mins*0.5&&secs/60<=mins*2,
@@ -42,7 +42,7 @@ vm.runInContext(main.slice(from,to),context);
  delete files["@data/verified-title-mappings.json"];
  mismatched=true;
  await context.alLearnUserTitleAlias(picked);
- assert.equal(Object.keys(files).length,0,"Conflicting provider IMDb must never be learned");
+ assert.equal(Object.keys(files).length,0,"Picked TMDb ID must agree with provider detail");
  mismatched=false;
  await context.alLearnUserTitleAlias({...picked,episode:3});
  assert.equal(Object.keys(files).length,0,"Different selected episode must never be learned");
