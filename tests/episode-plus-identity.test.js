@@ -92,7 +92,22 @@ const sourceEnd=main.indexOf("// TMDB, cached",sourceStart);
 assert(sourceStart>=0 && sourceEnd>sourceStart, "Cannot locate real main.js parser functions");
 const context=vm.createContext({episodePlusAios:aios});
 vm.runInContext(main.slice(sourceStart,sourceEnd),context,{filename:"main-episode-parser.js"});
+
 assert.equal(typeof context.alReadings,"function");
+// The IINA HLS manifest is index.m3u8, but its mpv media-title carries S/E.
+const cityLabel="City of Splendour · S01E01 · Episode 1";
+const cityParsed=context.alParseName(cityLabel);
+assert.equal(cityParsed.title,"City of Splendour");
+assert.equal(cityParsed.season,1);
+assert.equal(cityParsed.episode,1);
+assert.equal(cityParsed.episodeTitle,"Episode 1");
+const cityReading=context.alReading(cityLabel,[],"title",true);
+assert.equal(cityReading.p.title,"City of Splendour");
+assert.equal(context.alUsable(cityReading),true,
+  "HLS IINA media-title is a usable S/E-based candidate, despite index.m3u8");
+assert.equal(context.alParseName("A · Special Title · S01E03 · The Third").title,
+  "A · Special Title","Do not mutate middle dots inside the real show name");
+
 // Regression: exact AIOStreams HLS media label from the IINA screenshot.
 // The generic index.m3u8 path MUST NOT erase #aios_title season/episode.
 const aiosLabel="index.m3u8#aios_title=Ok! Let's Get Divorced · S01E10 · A Second Chance At Love";
@@ -201,8 +216,8 @@ const playerHints={
 const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,"../Info.json"),"utf8"));
 assert.equal(manifest.identifier,"io.github.olivergiangvu.iinaepisodeinfoplus");
 assert.equal(manifest.ghRepo,"olivergiangvu/iina-episode-info-plus");
-assert.equal(manifest.ghVersion,25);
-assert.equal(manifest.version,"1.3.4-beta.1");
+assert.equal(manifest.ghVersion,27);
+assert.equal(manifest.version,"1.3.4-beta.3");
 // Contract test for the actual IINA HTTP bridge: numeric query values are
 // encoded into strings in the URL, never passed as raw numbers in params.
 const bridge=require("../episode-plus-http.js");
