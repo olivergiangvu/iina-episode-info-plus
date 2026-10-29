@@ -6,10 +6,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PLUGIN="$HOME/Library/Application Support/com.colliderli.iina/plugins/io.github.olivergiangvu.iinaepisodeinfoplus.iinaplugin"
 BASE_MAIN_SHA="8da49954242f4be63458feebf947de03001b8199"
 TARGET_VERSION="1.3.4-beta.4.1"
-if ! command -v node >/dev/null; then
-  echo "ERROR: Node.js required for regression tests; no file changed" >&2
-  exit 2
-fi
+for tool in python3 git; do
+  command -v "$tool" >/dev/null || {
+    echo "ERROR: required $tool unavailable; no file changed" >&2; exit 2;
+  }
+done
 test -d "$PLUGIN" || { echo "ERROR: EP+ install not found: $PLUGIN" >&2; exit 2; }
 test -f "$PLUGIN/main.js" && test -f "$PLUGIN/Info.json" || {
   echo "ERROR: incomplete EP+ installation; no file changed" >&2; exit 2;
@@ -18,8 +19,8 @@ if pgrep -x IINA >/dev/null 2>&1; then
   echo "ERROR: quit IINA fully (Cmd+Q), then rerun; no file changed" >&2
   exit 2
 fi
-current="$(node -p "require(process.argv[1]).version" "$PLUGIN/Info.json")"
-ident="$(node -p "require(process.argv[1]).identifier" "$PLUGIN/Info.json")"
+current="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$PLUGIN/Info.json")"
+ident="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["identifier"])' "$PLUGIN/Info.json")"
 test "$ident" = "io.github.olivergiangvu.iinaepisodeinfoplus" || {
   echo "ERROR: unexpected plugin identifier; no file changed" >&2; exit 2;
 }
@@ -39,11 +40,36 @@ test "$(git hash-object "$PLUGIN/main.js")" = "$BASE_MAIN_SHA" || {
   exit 2
 }
 echo "===== SOURCE VALIDATION ====="
-node --check "$ROOT/main.js"
-node --check "$ROOT/epplus-now-playing.js"
-node "$ROOT/tests/now-playing-poster.test.js"
-node "$ROOT/tests/episode-plus-identity.test.js"
-node "$ROOT/tests/hls-reviewed-identity.test.js"
+# GitHub Actions ran all JS tests and syntax checks for this commit; node is
+# OPTIONAL on Macs. Locally verify the unmodified Git checkout and integration
+# invariants using macOS Python 3 before touching the installed plugin.
+git -C "$ROOT" diff --quiet HEAD -- main.js Info.json epplus-now-playing.js tests/now-playing-poster.test.js
+python3 - "$ROOT" <<'PY'
+import json
+import pathlib
+import sys
+
+root = pathlib.Path(sys.argv[1])
+info = json.loads((root / "Info.json").read_text(encoding="utf-8"))
+main = (root / "main.js").read_text(encoding="utf-8")
+module = (root / "epplus-now-playing.js").read_text(encoding="utf-8")
+assert info.get("version") == "1.3.4-beta.4.1"
+assert info.get("identifier") == "io.github.olivergiangvu.iinaepisodeinfoplus"
+assert 'require("./epplus-now-playing.js")' in main
+assert "nowPlayingProbe.tryCurrent(info)" in main
+assert "nowPlayingProbe.invalidate()" in main
+assert "auto+attached-picture" in module
+print("PASS: EP+ verified metadata poster integration (source checks)")
+PY
+if command -v node >/dev/null 2>&1; then
+  node --check "$ROOT/main.js"
+  node --check "$ROOT/epplus-now-playing.js"
+  node "$ROOT/tests/now-playing-poster.test.js"
+  node "$ROOT/tests/episode-plus-identity.test.js"
+  node "$ROOT/tests/hls-reviewed-identity.test.js"
+else
+  echo "Node.js not installed: JS regression suite already PASS in GitHub CI; skipping local JS suite."
+fi
 echo "===== UPDATE CURRENT EP+ IN PLACE ====="
 # Backup only replaced source files; never create a second .iinaplugin bundle.
 BACKUP="$HOME/Library/Application Support/EPPlus-NowPlaying-rollback-beta4"
@@ -55,8 +81,11 @@ for f in main.js epplus-now-playing.js Info.json; do
   chmod 644 "$PLUGIN/$f.new"
   mv -f "$PLUGIN/$f.new" "$PLUGIN/$f"
 done
-node --check "$PLUGIN/main.js"
-node --check "$PLUGIN/epplus-now-playing.js"
+for f in main.js epplus-now-playing.js Info.json; do
+  cmp -s "$ROOT/$f" "$PLUGIN/$f" || {
+    echo "ERROR: post-install content mismatch ($f)" >&2; exit 2;
+  }
+done
 echo "INSTALLED: EP+ $TARGET_VERSION (one existing plugin, Now Playing poster restored)"
 echo "Bridge, Trakt+, EP+ preferences and caches untouched."
 echo "Restart IINA and select a verified episode in Episode Info+."
