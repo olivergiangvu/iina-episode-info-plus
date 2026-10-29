@@ -7,7 +7,7 @@ const main=fs.readFileSync(path.join(__dirname,"../main.js"),"utf8");
 const sidebar=fs.readFileSync(path.join(__dirname,"../sidebar.html"),"utf8");
 const overlayHtml=fs.readFileSync(path.join(__dirname,"../overlay.html"),"utf8");
 const manifest=require("../Info.json");
-assert.equal(manifest.version,"1.3.4-beta.4");
+assert.equal(manifest.version,"1.3.4-beta.4.1");
 assert.equal(manifest.ghVersion,28);
 assert.equal(manifest.identifier,"io.github.olivergiangvu.iinaepisodeinfoplus");
 function segment(src,a,b){
