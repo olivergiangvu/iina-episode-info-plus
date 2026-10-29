@@ -12,6 +12,7 @@ on:
       - episode-plus-http.js
       - episode-plus-aios.js
       - epplus-now-playing.js
+      - scripts/install-now-playing-beta4-macos.sh
       - trusted-series-aliases.js
       - tests/**
       - .github/workflows/episode-info-plus-ci.yml
@@ -34,6 +35,8 @@ jobs:
           node --check episode-plus-aios.js
           node --check epplus-now-playing.js
           node --check trusted-series-aliases.js
+      - name: Validate in-place macOS installer syntax
+        run: bash -n scripts/install-now-playing-beta4-macos.sh
       - name: Run matching and interface regression tests
         run: |
           node tests/episode-plus-identity.test.js
