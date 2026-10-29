@@ -1203,7 +1203,7 @@ async function alLearnUserTitleAlias(info){
      trustedSeriesAliases.norm(parsed.title)===trustedSeriesAliases.norm(info.showTitle))return;
   var show=await alTvDetails(Number(info.tmdbId));
   var year=show&&alYearOf(show.date);
-  if(!show||!year||!/^tt\d{6,10}$/i.test(show.imdb||"")||
+  if(!show||Number(show.id)!==Number(info.tmdbId)||!year||!/^tt\d{6,10}$/i.test(show.imdb||"")||
      trustedSeriesAliases.norm(show.name)!==trustedSeriesAliases.norm(info.showTitle)||
      !show.seasons.includes(parsed.season))return;
   var sd=await alSeason(show.id,parsed.season);
