@@ -5,6 +5,7 @@ const episodePlusIdentity = require("./episode-plus-identity.js");
 const episodePlusTvmaze = require("./episode-plus-tvmaze.js");
 const episodePlusHttp = require("./episode-plus-http.js");
 const episodePlusAios = require("./episode-plus-aios.js");
+const trustedSeriesAliases = require("./trusted-series-aliases.js");
 // Messages to the overlay and sidebar go through messageSafe()
 const overlay = safeMessenger(iina.overlay, ["loadFile", "onMessage", "show", "hide", "setClickable"]);
 const sidebar = safeMessenger(iina.sidebar, ["loadFile", "onMessage"]);
@@ -1178,10 +1179,34 @@ function alMovieInfo(d) {
   return info;
 }
 
+// Reviewed catalog aliases are verified in two independent catalogs before
+// being used. Failure does not authorize a fuzzy fallback or invented ID.
+async function alReviewedTv(p, seconds, evidence) {
+  if (p.season == null || p.season < 1 || p.episode == null || p.episode < 1)
+    return alNotSure("reviewed series alias needs exact S/E", p.title);
+  var show=await alTvDetails(evidence.tmdb);
+  if (!show || Number(show.id)!==evidence.tmdb ||
+      alYearOf(show.date)!==evidence.year ||
+      String(show.imdb||"").toLowerCase()!==evidence.imdb ||
+      alNorm(show.name)!==alNorm(evidence.canonicalTitle) ||
+      show.seasons.indexOf(p.season)<0)
+    return alNotSure("cross-catalog show identifiers disagree", p.title);
+  var season=await alSeason(show.id,p.season);
+  var episode=season && season.episodes.filter(function(e){return e.n===p.episode;})[0];
+  if (!episode) return alNotSure("verified show has no S/E in TMDB",p.title);
+  if (!alLengthFits(seconds,episode.runtime,p.episodes))
+    return alNotSure("verified episode runtime differs from playback",p.title);
+  var info=alTvInfo(show,season,episode,p.season);
+  info.identitySource="Reviewed alias + TMDB/IMDb verified";
+  return {info:info,query:p.title};
+}
+
 async function alMatchTv(p, seconds, opts) {
   opts = opts || {};
   if (p.seasonWords) return alNotSure("its season numbering may not match TMDB's", p.title);
   if (p.season === 0) return alNotSure("specials are numbered differently everywhere", p.title);
+  var reviewed=trustedSeriesAliases.find(p.title,p.year,"episode");
+  if (reviewed) return alReviewedTv(p,seconds,reviewed);
   var list = await alSearch("tv", p.title, p.year ? { first_air_date_year: p.year } : null);
   var loose = false;
   if (p.year && !(await alTitleCandidates("tv", list, p.title)).length) {
