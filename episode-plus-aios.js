@@ -9,6 +9,21 @@ function decode(value) {
  }
  return s;
 }
+// AIOStreams/IINA may expose the clean player label without an HLS fragment.
+// This is only a lookup hint: TMDB or TVmaze must still verify the exact episode.
+function parsePlayerTitle(source) {
+ var value=String(source||"").trim();
+ if(value.length<10||value.length>350||/[\x00-\x1f]/.test(value)||
+    /(?:https?:\/\/|[?#=]|index\.m3u8)/i.test(value))return null;
+ var m=/^(.{2,170}?)\s*[·•]\s*[Ss](\d{1,2})[Ee](\d{1,4})(?:\s*[·•]\s*(.{1,170}))?\s*$/u.exec(value);
+ if(!m)return null;
+ var title=m[1].trim(),season=Number(m[2]),episode=Number(m[3]),episodeTitle=String(m[4]||"").trim();
+ if(!title||season>99||episode<1||episode>9999||/[?#=]/.test(episodeTitle))return null;
+ var code="S"+String(season).padStart(2,"0")+"E"+String(episode).padStart(2,"0");
+ return {title:title,season:season,episode:episode,episodeTitle:episodeTitle,
+  file:title+" "+code+(episodeTitle?" - "+episodeTitle:""),
+  raw:value,source:"aios-title"};
+}
 function parse(source) {
  var raw=String(source||""),hash=raw.indexOf("#");
  if(hash<0||hash>2000||raw.length-hash>900)return null;
@@ -16,19 +31,9 @@ function parse(source) {
  for(var i=0;i<part.length;i++){
   var eq=part[i].indexOf("=");
   if(eq<=0||decode(part[i].slice(0,eq)).toLowerCase()!=="aios_title")continue;
-  if(found)return {conflict:true}; // Duplicate title parameters are ambiguous.
-  var value=decode(part[i].slice(eq+1)).trim();
-  if(value.length<10||value.length>350||/[\x00-\x1f]/.test(value))return null;
-  var m=/^(.{2,170}?)\s*[·•]\s*[Ss](\d{1,2})[Ee](\d{1,4})(?:\s*[·•]\s*(.{1,170}))?\s*$/u.exec(value);
-  if(!m)return null;
-  var title=m[1].trim(),season=Number(m[2]),episode=Number(m[3]),episodeTitle=String(m[4]||"").trim();
-  if(!title||season>99||episode<1||episode>9999||
-     /(?:https?:\/\/|[?#=]|index\.m3u8)/i.test(title)||
-     /[?#=]/.test(episodeTitle))return null;
-  var code="S"+String(season).padStart(2,"0")+"E"+String(episode).padStart(2,"0");
-  found={title:title,season:season,episode:episode,episodeTitle:episodeTitle,
-   file:title+" "+code+(episodeTitle?" - "+episodeTitle:""),
-   raw:value,source:"aios-title"};
+  if(found)return {conflict:true};
+  found=parsePlayerTitle(decode(part[i].slice(eq+1)));
+  if(!found)return null;
  }
  return found;
 }
@@ -37,6 +42,10 @@ function extract(h) {
  var fields=["path","url","filename","mediaTitle","metadataTitle"],match=null;
  for(var i=0;i<fields.length;i++){
   var p=parse(h&&h[fields[i]]);
+  if(!p&&(fields[i]==="mediaTitle"||fields[i]==="metadataTitle")){
+   p=parsePlayerTitle(h&&h[fields[i]]);
+   if(p)p.source="aios-player-title";
+  }
   if(!p)continue;
   if(p.conflict)return {conflict:true,reason:"duplicate-title"};
   if(!match){match=p;continue;}
@@ -46,4 +55,4 @@ function extract(h) {
  }
  return match;
 }
-module.exports={parse:parse,extract:extract};
+module.exports={parse:parse,parsePlayerTitle:parsePlayerTitle,extract:extract};
