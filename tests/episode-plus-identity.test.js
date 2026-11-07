@@ -202,7 +202,7 @@ const playerHints={
  assert.equal(hellReadings[0].p.title,"Hell Barrister");
  assert.equal(hellReadings[0].p.season,1);
  assert.equal(hellReadings[0].p.episode,1);
- assert(hellReadings.filter(context.alUsable).every(r=>context.alNorm(r.p.title)==="hellbarrister"),
+ assert(hellReadings.filter(context.alUsable).every(r=>norm(r.p.title)==="hellbarrister"),
    "Opaque HLS token must never become an alternate movie identity");
  const savedMatchTv=context.alMatchTv;
  context.alMatchTv=async function(parsed,seconds){
