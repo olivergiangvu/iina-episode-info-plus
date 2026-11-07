@@ -173,6 +173,7 @@ const playerHints={
  context.alServerName=async function(){throw Error("Playback URL headers should not override filename");};
  context.alFromImdb=async function(){throw Error("MediaFusion URL has no IMDb ID");};
  context.alNotSure=function(reason,query){return {info:null,reason:reason,query:query||""};};
+ context.alNorm=norm; // main.js normalizer is outside the isolated parser slice.
  vm.runInContext(main.slice(lookupStart,lookupEnd),context,{filename:"main-lookup.js"});
  const result=await context.alLookup(playerHints,()=>3000);
  // IINA screenshot #aios_title flows through real parser -> TV TMDB lookup,
