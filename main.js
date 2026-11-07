@@ -932,6 +932,14 @@ async function alStremioName(st) {
   return pick ? { file: String(pick.name), folder: t.name ? String(t.name) : "" } : null;
 }
 
+// Opaque CDN HLS tokens are not media names, even when they are short
+// enough to evade the generic 20-character hash filter.
+function alOpaqueHlsName(name) {
+ var leaf=String(name||"").split("/").pop();
+ var m=/^([A-Za-z0-9_-]{12,})\.m3u8$/i.exec(leaf);
+ return !!(m&&!/[Ss]\d{1,2}[Ee]\d{1,4}/.test(m[1]));
+}
+
 // Every name the file is known by, best first.
 async function alReadings(h, link) {
   var out = [];
@@ -951,7 +959,7 @@ async function alReadings(h, link) {
   // Reject opaque URLs, tokenized labels and non-video titles here.
   var mpvFilename = String(h.filename || "").trim();
   if (mpvFilename.length > 0 && mpvFilename.length <= 500 &&
-      AL_VIDEO_EXT.test(mpvFilename) &&
+      AL_VIDEO_EXT.test(mpvFilename) && !alOpaqueHlsName(mpvFilename) &&
       !/^[a-z][a-z0-9+.-]*:\/\//i.test(mpvFilename) && !/[?&#]/.test(mpvFilename)) {
     out.push(alReading(mpvFilename.split("/").pop(), [], "mpv-filename"));
   }
@@ -976,7 +984,7 @@ async function alReadings(h, link) {
     var v = alDispositionName(alQuery(link, k));
     if (v) out.push(alReading(v, [], "link"));
   });
-  if (link.segments.length && !st) {
+  if (link.segments.length && !st && !alOpaqueHlsName(link.segments[link.segments.length-1])) {
     var segs = link.segments, last = segs[segs.length - 1];
     // The end of a link only counts if it looks like a file name
     out.push(alReading(last, segs.slice(0, -1), link.scheme === "file" ? "file name" : "link",
@@ -1590,11 +1598,20 @@ async function autoLookup(d) {
   }
   // Do not reclassify a "not found" network exception as nonexistent media.
   // Use a distinct source if TMDB cannot confirm the episode.
-  if(!reply.info&&fast&&currentVideoUrl===forUrl){
+  // Accept a strict IINA AIOStreams player label only as a hint; an
+  // independent TVmaze title/S-E/runtime check must still verify the result.
+  var tvmazeCandidate=fast;
+  if(!tvmazeCandidate&&aios&&!aios.conflict){
+    tvmazeCandidate={info:{
+      isMovie:false,showTitle:aios.title,season:aios.season,episode:aios.episode,
+      code:"S"+alPad2(aios.season)+"E"+alPad2(aios.episode)
+    }};
+  }
+  if(!reply.info&&tvmazeCandidate&&currentVideoUrl===forUrl){
     try {
-      var alt=await alTvmazeFallback(fast,alHints(),alSeconds());
+      var alt=await alTvmazeFallback(tvmazeCandidate,alHints(),alSeconds());
       if(alt){
-        var a=fast.info;
+        var a=tvmazeCandidate.info;
         if(a.code===alt.code&&alNorm(a.showTitle)===alNorm(alt.showTitle)){
           reply.info=alt;reply.phase="verified";reply.reason="";
           reply.info.auto={from:"TVmaze"};
