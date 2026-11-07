@@ -8,9 +8,11 @@ Maintained as an independent fork of [Zain Imam's Episode Info](https://github.c
 
 ## Episode Info Plus features
 
-**Beta: v1.3.4-beta.1 — year-aware Automatic Lookup for opaque StremThru playback.** The mpv release filename `Mystic.Nine.S01E08.2026.2160p.WEB-DL...` now keeps `episodeYear=2026` separate from the show's premiere year, so a 2026 episode is not confused with *The Mystic Nine* (2016). A year immediately after S/E is no longer misread as an episode title. TMDB must confirm the exact episode air year; unknown/mismatched dates are not guessed. When multiple otherwise matching series have different episode air years and the filename gives no year, Auto Lookup requests manual selection instead of following IMDb/TMDB popularity. A safe diagnostic trace reports candidate source, parsed year, match outcome and reject reason without logging stream tokens. Automated fixtures cover the real opaque URL shape, 2016 vs 2026, and Fallout's later-season episode year. **Stable remains v1.3.3; Mac/IINA playback verification is required before stable promotion.**
+**Stable v1.3.4 — year-aware StremThru filenames and AIOStreams HLS title recognition.** In addition to the beta.1 release-year and episode verification, this release supports a clean IINA player label such as `Hell Barrister · S01E01 · Episode 1` for opaque HLS streams, without treating random `.m3u8` tokens as movie titles. A provider must still verify the exact episode. Field-tested with AIOStreams and IINA. [Full release notes](docs/releases/v1.3.4.md).
 
-**Current Stable: v1.3.3** — promoted from the Mac-tested beta.9. Light/Dark Glass and sidebar are visually aligned; no functional changes to matching, metadata, subtitles or Skip Intro since beta.9. See [v1.3.3 release notes](docs/releases/v1.3.3.md). Previous Stable v1.3.2 remains for rollback.
+**Historical beta: v1.3.4-beta.1 — year-aware Automatic Lookup for opaque StremThru playback.** The mpv release filename `Mystic.Nine.S01E08.2026.2160p.WEB-DL...` now keeps `episodeYear=2026` separate from the show's premiere year, so a 2026 episode is not confused with *The Mystic Nine* (2016). A year immediately after S/E is no longer misread as an episode title. TMDB must confirm the exact episode air year; unknown/mismatched dates are not guessed. When multiple otherwise matching series have different episode air years and the filename gives no year, Auto Lookup requests manual selection instead of following IMDb/TMDB popularity. A safe diagnostic trace reports candidate source, parsed year, match outcome and reject reason without logging stream tokens. Automated fixtures cover the real opaque URL shape, 2016 vs 2026, and Fallout's later-season episode year. **Stable remains v1.3.3; Mac/IINA playback verification is required before stable promotion.**
+
+**Current Stable: v1.3.4** — promoted from the Mac-tested beta.9. Light/Dark Glass and sidebar are visually aligned; no functional changes to matching, metadata, subtitles or Skip Intro since beta.9. See [v1.3.3 release notes](docs/releases/v1.3.3.md). Previous Stable v1.3.2 remains for rollback.
 
 **v1.3.3-beta.9 — native OSD-style text repair:** Immediately removes all beta.8 light text strokes and four-direction white edging. Light Glass now uses crisp, unoutlined near-black typography over one evenly translucent neutral-grey material, scaled with Shade (about 59% at Shade 57%) to protect contrast on darker video. No central scrim, poster/color changes, Cast/Up Next API changes or per-video sampling. Dark Mode and native IINA sidebar are unchanged. This is an approximation of native OSD; HTML/WebView cannot guarantee the exact native video-backdrop blur. Mac visual verification is required before Stable.
 
@@ -59,9 +61,9 @@ Open **IINA → Settings/Preferences → Plugins → Install from GitHub** and e
 https://github.com/olivergiangvu/iina-episode-info-plus
 ```
 
-Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **1.3.3** (GitHub Latest). The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
+Or install the `.iinaplgz` file from [Releases](https://github.com/olivergiangvu/iina-episode-info-plus/releases). Latest stable: **1.3.4** (GitHub Latest). The plugin identifier remains `io.github.olivergiangvu.iinaepisodeinfoplus`, so it can replace the earlier Plus beta, while original Episode Info and Trakt+ have separate identifiers.
 
-GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (currently **24** for v1.3.3 Stable). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
+GitHub auto-updates use `ghRepo: olivergiangvu/iina-episode-info-plus` and a monotonic integer `ghVersion` (currently **27** for v1.3.4 Stable). **Manually reinstall the new package once** if your previous beta had no `ghRepo`; automatic version checks then follow this repository.
 
 ## Preserving settings
 

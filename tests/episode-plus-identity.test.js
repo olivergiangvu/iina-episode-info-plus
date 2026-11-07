@@ -108,6 +108,21 @@ for(const given of [aiosLabel,aiosUrl]){
  assert.equal(result.file.slice(0,22).toLowerCase(),"ok! let's get divorced");
  assert(result.file.includes("S01E10"));
 }
+// Actual IINA playback: the CDN HLS filename is opaque, but mpv has a clean title.
+const hellLabel="Hell Barrister · S01E01 · Episode 1";
+const hellHints={path:"https://cdn.example.invalid/hls/kPB8PqPOhvFdpFLbeTg.m3u8",
+ url:"https://cdn.example.invalid/hls/kPB8PqPOhvFdpFLbeTg.m3u8",
+ filename:"kPB8PqPOhvFdpFLbeTg.m3u8",mediaTitle:hellLabel,metadataTitle:""};
+assert.equal(aios.parse(hellLabel),null,"Plain label is not a URL fragment");
+const hellExtract=aios.extract(hellHints);
+assert(hellExtract&&!hellExtract.conflict);
+assert.equal(hellExtract.title,"Hell Barrister");
+assert.equal(hellExtract.season,1);
+assert.equal(hellExtract.episode,1);
+assert.equal(hellExtract.source,"aios-player-title");
+assert(aios.extract({...hellHints,metadataTitle:"Other Show · S01E01 · Pilot"}).conflict,
+ "Conflicting plain metadata titles must fail closed");
+
 assert.equal(aios.parse("https://host.invalid/index.m3u8"),null,"Opaque HLS path must never produce a title");
 assert.equal(aios.parse("https://host.invalid/watch#token=s3e10"),null,"Unknown fragment key must not match");
 assert.equal(aios.parse("https://host.invalid/index.m3u8#aios_title=Random Movie"),null,
@@ -158,6 +173,7 @@ const playerHints={
  context.alServerName=async function(){throw Error("Playback URL headers should not override filename");};
  context.alFromImdb=async function(){throw Error("MediaFusion URL has no IMDb ID");};
  context.alNotSure=function(reason,query){return {info:null,reason:reason,query:query||""};};
+ context.alNorm=norm; // main.js normalizer is outside the isolated parser slice.
  vm.runInContext(main.slice(lookupStart,lookupEnd),context,{filename:"main-lookup.js"});
  const result=await context.alLookup(playerHints,()=>3000);
  // IINA screenshot #aios_title flows through real parser -> TV TMDB lookup,
@@ -181,6 +197,23 @@ const playerHints={
  assert(aiosResult.info&&aiosResult.info.code==="S01E10");
  assert.equal(aiosResult.info.epTitle,"A Second Chance At Love");
  assert.equal(aiosResult.from,"Ok! Let's Get Divorced S01E10 - A Second Chance At Love");
+  assert.equal(context.alOpaqueHlsName(hellHints.filename),true);
+ const hellReadings=await context.alReadings(hellHints,context.alSplitLink(hellHints.path));
+ assert.equal(hellReadings[0].source,"aios-title");
+ assert.equal(hellReadings[0].p.title,"Hell Barrister");
+ assert.equal(hellReadings[0].p.season,1);
+ assert.equal(hellReadings[0].p.episode,1);
+ assert(hellReadings.filter(context.alUsable).every(r=>norm(r.p.title)==="hellbarrister"),
+   "Opaque HLS token must never become an alternate movie identity");
+ const savedMatchTv=context.alMatchTv;
+ context.alMatchTv=async function(parsed,seconds){
+  assert.equal(parsed.title,"Hell Barrister");
+  assert.equal(parsed.season,1);assert.equal(parsed.episode,1);assert.equal(seconds,2790);
+  return {info:{showTitle:"Hell Barrister",epTitle:"Episode 1",code:"S01E01",isMovie:false}};
+ };
+ const hellMatched=await context.alLookup(hellHints,()=>2790);
+ assert.equal(hellMatched.info.code,"S01E01");
+ context.alMatchTv=savedMatchTv;
  const fromUrl={path:aiosUrl,url:aiosUrl,filename:"index.m3u8",mediaTitle:"index.m3u8"};
  const fromUrlReadings=await context.alReadings(fromUrl,context.alSplitLink(fromUrl.path));
  assert.equal(fromUrlReadings[0].p.title,"OK! Let's Get Divorced");
@@ -201,8 +234,8 @@ const playerHints={
 const manifest=JSON.parse(fs.readFileSync(path.join(__dirname,"../Info.json"),"utf8"));
 assert.equal(manifest.identifier,"io.github.olivergiangvu.iinaepisodeinfoplus");
 assert.equal(manifest.ghRepo,"olivergiangvu/iina-episode-info-plus");
-assert.equal(manifest.ghVersion,25);
-assert.equal(manifest.version,"1.3.4-beta.1");
+assert.equal(manifest.ghVersion,27);
+assert.equal(manifest.version,"1.3.4");
 // Contract test for the actual IINA HTTP bridge: numeric query values are
 // encoded into strings in the URL, never passed as raw numbers in params.
 const bridge=require("../episode-plus-http.js");

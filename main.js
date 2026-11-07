@@ -1,4 +1,4 @@
-// IINA Plugin: Episode Info Plus v1.3.4-beta.1
+// IINA Plugin: Episode Info Plus v1.3.4
 
 const { core, event, utils, file, menu } = iina;
 const episodePlusIdentity = require("./episode-plus-identity.js");
@@ -68,7 +68,7 @@ function withTimeout(p, ms, label) {
 var HTTP_TIMEOUT_MS = 10000; // per-call budget
 
 // OpenSubtitles needs a User-Agent like "AppName vX.Y.Z" or it throttles requests
-var OS_USER_AGENT = "EpisodeInfo v1.3.4-beta.1";
+var OS_USER_AGENT = "EpisodeInfo v1.3.4";
 
 // Lazy IMDB id resolver: show-level and episode-level ids from TMDB
 async function resolveImdbIds(d, tmdbKey) {
@@ -932,13 +932,25 @@ async function alStremioName(st) {
   return pick ? { file: String(pick.name), folder: t.name ? String(t.name) : "" } : null;
 }
 
+// Opaque CDN HLS tokens are not media names, even when they are short
+// enough to evade the generic 20-character hash filter.
+function alOpaqueHlsName(name) {
+ var leaf=String(name||"").split("/").pop();
+ var m=/^([A-Za-z0-9_-]{12,})\.m3u8$/i.exec(leaf);
+ return !!(m&&!/[Ss]\d{1,2}[Ee]\d{1,4}/.test(m[1]));
+}
+
 // Every name the file is known by, best first.
 async function alReadings(h, link) {
   var out = [];
   // Playback HLS filenames are often just index.m3u8. The explicit AIOStreams
   // #aios_title= fragment carries the actual TV show + S/E, not the path.
   var aios=episodePlusAios.extract(h);
-  if(aios && !aios.conflict)out.push(alReading(aios.file, [], "aios-title"));
+  // Prefer a real release filename (with episode/year/quality evidence)
+  // over a clean IINA display label. For opaque HLS filenames, use the label.
+  var deferPlainLabel=!!(aios&&!aios.conflict&&aios.source==="aios-player-title"&&
+    AL_VIDEO_EXT.test(String(h.filename||""))&&!alOpaqueHlsName(h.filename));
+  if(aios&&!aios.conflict&&!deferPlainLabel)out.push(alReading(aios.file, [], "aios-title"));
 
   var st = alStremioPath(link);
   if (st) {
@@ -951,10 +963,11 @@ async function alReadings(h, link) {
   // Reject opaque URLs, tokenized labels and non-video titles here.
   var mpvFilename = String(h.filename || "").trim();
   if (mpvFilename.length > 0 && mpvFilename.length <= 500 &&
-      AL_VIDEO_EXT.test(mpvFilename) &&
+      AL_VIDEO_EXT.test(mpvFilename) && !alOpaqueHlsName(mpvFilename) &&
       !/^[a-z][a-z0-9+.-]*:\/\//i.test(mpvFilename) && !/[?&#]/.test(mpvFilename)) {
     out.push(alReading(mpvFilename.split("/").pop(), [], "mpv-filename"));
   }
+  if(deferPlainLabel)out.push(alReading(aios.file, [], "aios-title"));
   // DMM/mpv can put the real filename inside an opaque player label:
   // 98800072:1?h=<hash>&file=Better.Call.Saul.S03E03.mkv
   // Never treat the opaque prefix or its hash as a media title.
@@ -976,7 +989,7 @@ async function alReadings(h, link) {
     var v = alDispositionName(alQuery(link, k));
     if (v) out.push(alReading(v, [], "link"));
   });
-  if (link.segments.length && !st) {
+  if (link.segments.length && !st && !alOpaqueHlsName(link.segments[link.segments.length-1])) {
     var segs = link.segments, last = segs[segs.length - 1];
     // The end of a link only counts if it looks like a file name
     out.push(alReading(last, segs.slice(0, -1), link.scheme === "file" ? "file name" : "link",
@@ -1590,11 +1603,20 @@ async function autoLookup(d) {
   }
   // Do not reclassify a "not found" network exception as nonexistent media.
   // Use a distinct source if TMDB cannot confirm the episode.
-  if(!reply.info&&fast&&currentVideoUrl===forUrl){
+  // Accept a strict IINA AIOStreams player label only as a hint; an
+  // independent TVmaze title/S-E/runtime check must still verify the result.
+  var tvmazeCandidate=fast;
+  if(!tvmazeCandidate&&aios&&!aios.conflict){
+    tvmazeCandidate={info:{
+      isMovie:false,showTitle:aios.title,season:aios.season,episode:aios.episode,
+      code:"S"+alPad2(aios.season)+"E"+alPad2(aios.episode)
+    }};
+  }
+  if(!reply.info&&tvmazeCandidate&&currentVideoUrl===forUrl){
     try {
-      var alt=await alTvmazeFallback(fast,alHints(),alSeconds());
+      var alt=await alTvmazeFallback(tvmazeCandidate,alHints(),alSeconds());
       if(alt){
-        var a=fast.info;
+        var a=tvmazeCandidate.info;
         if(a.code===alt.code&&alNorm(a.showTitle)===alNorm(alt.showTitle)){
           reply.info=alt;reply.phase="verified";reply.reason="";
           reply.info.auto={from:"TVmaze"};
