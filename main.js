@@ -946,7 +946,11 @@ async function alReadings(h, link) {
   // Playback HLS filenames are often just index.m3u8. The explicit AIOStreams
   // #aios_title= fragment carries the actual TV show + S/E, not the path.
   var aios=episodePlusAios.extract(h);
-  if(aios && !aios.conflict)out.push(alReading(aios.file, [], "aios-title"));
+  // Prefer a real release filename (with episode/year/quality evidence)
+  // over a clean IINA display label. For opaque HLS filenames, use the label.
+  var deferPlainLabel=!!(aios&&!aios.conflict&&aios.source==="aios-player-title"&&
+    AL_VIDEO_EXT.test(String(h.filename||""))&&!alOpaqueHlsName(h.filename));
+  if(aios&&!aios.conflict&&!deferPlainLabel)out.push(alReading(aios.file, [], "aios-title"));
 
   var st = alStremioPath(link);
   if (st) {
@@ -963,6 +967,7 @@ async function alReadings(h, link) {
       !/^[a-z][a-z0-9+.-]*:\/\//i.test(mpvFilename) && !/[?&#]/.test(mpvFilename)) {
     out.push(alReading(mpvFilename.split("/").pop(), [], "mpv-filename"));
   }
+  if(deferPlainLabel)out.push(alReading(aios.file, [], "aios-title"));
   // DMM/mpv can put the real filename inside an opaque player label:
   // 98800072:1?h=<hash>&file=Better.Call.Saul.S03E03.mkv
   // Never treat the opaque prefix or its hash as a media title.
