@@ -34,3 +34,9 @@ The CI checks catch accidental deletion, broken module references and missing pa
 
 `feature/now-playing-poc` (beta.3) and historical Mac diagnostic:
 `Now Playing POC PASS: external albumart track exists`, `Reading external artwork file`, `Found front cover artwork`.
+
+## User acceptance (2026-11-12)
+
+- The user reported **"đã fix"** after installing the recovery candidate on Mac (native IINA playback). This is an explicit acceptance signal for the repaired feature, not automated proof of every other on-device integration.
+- Before Stable, CI must pass and the final release artifact must retain the Now Playing module.
+- The prior `v1.3.4` release is **non-compliant** because it dropped the tested artwork bridge. It must no longer appear as the current Stable. Preserve its tag/history for audit, mark the GitHub release as **pre-release**, and publish `v1.3.5` as the new latest Stable.
