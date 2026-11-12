@@ -22,7 +22,7 @@ const contracts = [
   ["Cast/Up Next", main, ['loadCardExtras', 'cardNextFor', 'cardCastFor']],
   ["Stream changes / cleanup", main, ['iina.file-loaded', 'clearEpisode', 'stopTimeWatcher']],
   ["Auto lookup sidebar", sidebar, ['autoLookupResult', 'showAutoMatch', 'Provisional identity']],
-  ["Light/Dark UI", overlay, ['prefers-color-scheme: light', 'prefers-color-scheme: dark']]
+  ["Light/Dark UI", overlay, ['prefers-color-scheme: light', 'background:rgba(12,14,20,0.84)']]
 ];
 for (const [name, text, anchors] of contracts) {
   for (const anchor of new Set(anchors)) {
