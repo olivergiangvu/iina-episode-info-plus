@@ -1,4 +1,4 @@
-// IINA Plugin: Episode Info Plus v1.3.4.1-rc.1 — Now Playing restoration
+// IINA Plugin: Episode Info Plus v1.3.5 — stable, Now Playing preserved
 
 const { core, event, utils, file, menu } = iina;
 const episodePlusIdentity = require("./episode-plus-identity.js");
