@@ -94,6 +94,8 @@ jobs:
           fi
           # Keep the old tag and file for audit/rollback; remove Stable status.
           if gh release view v1.3.4 >/dev/null 2>&1; then
-            gh release edit v1.3.4 --prerelease
+            gh release edit v1.3.4 --prerelease \
+              --title "Episode Info Plus v1.3.4 — Retired (non-compliant)" \
+              --notes-file docs/releases/v1.3.4-retired.md
           fi
           echo "Promoted v1.3.5 Stable; retired v1.3.4 to historical pre-release."
