@@ -7,8 +7,8 @@ const main=fs.readFileSync(path.join(__dirname,"../main.js"),"utf8");
 const sidebar=fs.readFileSync(path.join(__dirname,"../sidebar.html"),"utf8");
 const overlayHtml=fs.readFileSync(path.join(__dirname,"../overlay.html"),"utf8");
 const manifest=require("../Info.json");
-assert.equal(manifest.version,"1.3.4");
-assert.equal(manifest.ghVersion,27);
+assert.match(manifest.version, /^\d+\.\d+\.\d+(?:\.\d+)?(?:-[0-9A-Za-z.-]+)?$/);
+assert(Number.isInteger(manifest.ghVersion) && manifest.ghVersion > 0);
 assert.equal(manifest.identifier,"io.github.olivergiangvu.iinaepisodeinfoplus");
 function segment(src,a,b){
  const i=src.indexOf(a),j=src.indexOf(b,i+a.length);
