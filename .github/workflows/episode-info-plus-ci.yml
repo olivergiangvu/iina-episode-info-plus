@@ -1,18 +1,7 @@
 name: Episode Info Plus CI
 on:
   push:
-    branches: [main, episode-info-plus-import]
-    paths:
-      - Info.json
-      - main.js
-      - sidebar.html
-      - overlay.html
-      - episode-plus-identity.js
-      - episode-plus-tvmaze.js
-      - episode-plus-http.js
-      - episode-plus-aios.js
-      - tests/**
-      - .github/workflows/episode-info-plus-ci.yml
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -23,14 +12,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check JavaScript syntax
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check every active JS module
         run: |
           node --check main.js
           node --check episode-plus-identity.js
           node --check episode-plus-tvmaze.js
           node --check episode-plus-http.js
           node --check episode-plus-aios.js
-      - name: Run matching and interface regression tests
+          node --check epplus-now-playing.js
+          node --check tests/now-playing-integration.test.js
+          node --check tests/release-capabilities.test.js
+          node --check scripts/verify-plugin-package.js
+      - name: Existing identification, UI and integration regression suites
         run: |
           node tests/episode-plus-identity.test.js
           node tests/mystic-nine-autolookup.test.js
@@ -38,13 +34,19 @@ jobs:
           node tests/upstream-135-integration.test.js
           node tests/upstream-135-ui-integration.test.js
           node tests/glass-parity.test.js
-      - name: Check package and auto-update manifest
+      - name: Permanent capability and native Now Playing regression gates
         run: |
-          node -e 'const a=require("./Info.json");if(!Number.isInteger(a.ghVersion)||a.ghRepo!=="olivergiangvu/iina-episode-info-plus")process.exit(1)'
+          node tests/release-capabilities.test.js
+          node tests/now-playing-integration.test.js
+      - name: Build and verify the ACTUAL installable IINA package
+        run: |
+          node -e 'const a=require("./Info.json");if(!Number.isInteger(a.ghVersion)||a.ghRepo!=="olivergiangvu/iina-episode-info-plus"||a.identifier!=="io.github.olivergiangvu.iinaepisodeinfoplus")process.exit(1)'
           mkdir -p dist
           V="$(node -p 'require("./Info.json").version')"
-          zip -q -r "dist/Episode-Info-Plus-$V.iinaplgz" Info.json main.js episode-plus-identity.js episode-plus-tvmaze.js episode-plus-http.js episode-plus-aios.js sidebar.html overlay.html LICENSE
-          unzip -t "dist/Episode-Info-Plus-$V.iinaplgz"
+          OUT="dist/Episode-Info-Plus-$V.iinaplgz"
+          zip -q -r "$OUT" Info.json main.js episode-plus-identity.js episode-plus-tvmaze.js episode-plus-http.js episode-plus-aios.js epplus-now-playing.js sidebar.html overlay.html LICENSE
+          unzip -tq "$OUT"
+          node scripts/verify-plugin-package.js "$OUT"
       - uses: actions/upload-artifact@v4
         with:
           name: episode-info-plus-ci-package
