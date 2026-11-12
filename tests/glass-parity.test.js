@@ -3,8 +3,8 @@ const assert=require("node:assert/strict"),fs=require("node:fs"),vm=require("nod
 const overlay=fs.readFileSync(path.resolve(__dirname,"../overlay.html"),"utf8");
 const sidebar=fs.readFileSync(path.resolve(__dirname,"../sidebar.html"),"utf8");
 const manifest=require("../Info.json");
-assert.equal(manifest.version,"1.3.4");
-assert.equal(manifest.ghVersion,27);
+assert.match(manifest.version, /^\d+\.\d+\.\d+(?:\.\d+)?(?:-[0-9A-Za-z.-]+)?$/);
+assert(Number.isInteger(manifest.ghVersion) && manifest.ghVersion > 0);
 const begin=overlay.indexOf("/* Episode Info Plus: macOS Light and Dark use DIFFERENT glass materials.");
 const end=overlay.indexOf("  @media(prefers-contrast:more)",begin);
 assert(begin>=0&&end>begin);

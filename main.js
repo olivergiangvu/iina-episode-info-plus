@@ -1,10 +1,11 @@
-// IINA Plugin: Episode Info Plus v1.3.4
+// IINA Plugin: Episode Info Plus v1.3.5 — stable, Now Playing preserved
 
 const { core, event, utils, file, menu } = iina;
 const episodePlusIdentity = require("./episode-plus-identity.js");
 const episodePlusTvmaze = require("./episode-plus-tvmaze.js");
 const episodePlusHttp = require("./episode-plus-http.js");
 const episodePlusAios = require("./episode-plus-aios.js");
+const episodePlusNP = require("./epplus-now-playing.js");
 // Messages to the overlay and sidebar go through messageSafe()
 const overlay = safeMessenger(iina.overlay, ["loadFile", "onMessage", "show", "hide", "setClickable"]);
 const sidebar = safeMessenger(iina.sidebar, ["loadFile", "onMessage"]);
@@ -175,6 +176,11 @@ var timeWatcher        = null;   // id of the mpv.time-pos observer
 var tmdbKey            = ""; // pushed from the sidebar
 var segmentCache       = {};     // "imdb:season:episode" -> segments
 var currentVideoUrl    = ""; // url of the current file, for the sidebar's per-URL memory
+// IINA still owns media keys, playback state and the sole macOS Now Playing session.
+var nowPlayingProbe = episodePlusNP.createNowPlayingProbe({
+  iina: iina, core: core, utils: utils, withTimeout: withTimeout,
+  log: function(msg) { iina.console.log("[EpInfo] " + msg); }
+});
 
 function log(msg) {
   iina.console.log("[EpInfo] " + msg);
@@ -1719,11 +1725,19 @@ function registerSidebarHandlers() {
     log("episodeSelected: " + (info ? info.epTitle : "null"));
     currentEpisode = info;
     resolveSegments(info);
+    // Reuse verified EP+ poster; never infer identity from the HLS URL or start
+    // another media session. Keep playback/seek and Trakt+ fully IINA-native.
+    if (info && info.metadataPending !== true && info.posterUrl && info.tmdbId) {
+      nowPlayingProbe.tryCurrent(info).catch(function(e) {
+        iina.console.log("[EpInfo] Now Playing artwork failed: " + errStr(e));
+      });
+    }
     // No extra TMDB calls unless Cast/Up Next were explicitly enabled.
     if ((cardCast || cardNext) && info) loadCardExtras(info).catch(function(e){ });
   });
 
   sidebar.onMessage("clearEpisode", function() {
+    nowPlayingProbe.invalidate();
     cardExtras={key:"",cast:null,next:null};
     currentEpisode = null;
     segments = [];
@@ -2490,6 +2504,7 @@ event.on("iina.window-loaded", function() {
 });
 
 event.on("iina.file-loaded", function() {
+  nowPlayingProbe.invalidate();
   setupSidebar();
   currentEpisode = null;
   segments = [];
