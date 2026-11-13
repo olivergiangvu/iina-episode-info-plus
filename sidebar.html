@@ -1187,6 +1187,7 @@ function saveSelection(info) {
   pushRecent(info); // and Recent Picks
   showSaved(info);
   iina.postMessage("episodeSelected", info);
+  iina.postMessage("episodeUserSelected", info);
   document.getElementById("panel").innerHTML =
     '<div class="ok" style="padding:8px 0">✓ Saved</div>';
   selShow      = null;
