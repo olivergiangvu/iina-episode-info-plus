@@ -30,8 +30,8 @@ jobs:
           node - <<'NODE'
           const assert=require('node:assert/strict');
           const i=require('./Info.json');
-          assert.equal(i.version,'1.3.5-beta.1');
-          assert.equal(i.ghVersion,29);
+          assert.equal(i.version,'1.3.5-beta.2');
+          assert.equal(i.ghVersion,30);
           assert.equal(i.ghRepo,'olivergiangvu/iina-episode-info-plus');
           NODE
           for test in tests/*.js; do node "$test"; done
@@ -39,7 +39,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ASSET=Episode-Info-Plus-1.3.5-beta.1.iinaplgz
+          ASSET=Episode-Info-Plus-1.3.5-beta.2.iinaplgz
           zip -q -r "$ASSET" Info.json main.js episode-plus-identity.js \
             episode-plus-tvmaze.js episode-plus-http.js episode-plus-aios.js \
             epplus-now-playing.js trusted-series-aliases.js \
@@ -53,13 +53,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          TAG=v1.3.5-beta.1
+          TAG=v1.3.5-beta.2
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "ERROR: immutable beta already published" >&2
             exit 1
           fi
           gh release create "$TAG" \
-            Episode-Info-Plus-1.3.5-beta.1.iinaplgz SHA256SUMS.txt \
+            Episode-Info-Plus-1.3.5-beta.2.iinaplgz SHA256SUMS.txt \
             --target "$GITHUB_SHA" --title "Episode Info+ $TAG — Identity beta" \
-            --notes "IINA direct-install beta. Adds independently verified host-scoped user Correct Match aliases, keeps different-year shows separate, validates AIO authenticated sidecars, and preserves native Now Playing and subtitle functions. Trakt+ remains the only Trakt writer. Stable v1.3.5 is unchanged. Roll back by installing the previous GitHub stable release." \
+            --notes "IINA direct-install beta. Resolves Fired Up! 1997/2026 and comparable yearless, same-title episodes using uniquely close exact-S/E playback runtime confirmed against every competing TMDb or TVmaze candidate; unknown or similar durations still require manual confirmation. Retains year-aware host-scoped user aliases and authenticated AIO sidecars; preserves native Now Playing and subtitles. No year guessed from today's date. Trakt+ remains the only Trakt writer. Stable v1.3.5 unchanged; roll back from the previous GitHub release." \
             --prerelease --latest=false

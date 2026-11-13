@@ -290,7 +290,9 @@ function mazeRequest(path,query){
  assert.equal(await tvmaze.lookup({...hint,seconds:120},mazeRequest),null,"Runtime mismatch must reject");
  assert.equal(await tvmaze.lookup(hint,async function(path){
   if(path==="/search/shows")return [{show:mazeShow},{show:{...mazeShow,id:49042}}];
-  throw Error("Should not load ambiguous series");
+  if(path==="/shows/49041/episodebynumber"||path==="/shows/49042/episodebynumber")
+    return mazeEpisode;
+  throw Error("Unexpected ambiguous TVmaze request " + path);
  }),null,"Duplicate exactly named series must not be guessed");
  assert.equal(await tvmaze.lookup(hint,async function(path){
   if(path==="/search/shows")return [{show:{...mazeShow,name:"Fallout: New Vegas"}}];

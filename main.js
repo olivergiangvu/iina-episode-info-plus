@@ -1165,6 +1165,21 @@ function alDominant(fits) {
   return fits[0].votes >= 50 && fits[0].votes >= 10 * (fits[1].votes || 0) ? fits[0] : null;
 }
 
+// A 46-minute episode must not be confused with a 22- or 30-minute sitcom
+// merely because both have the same title and S/E. A video runtime is useful
+// independent evidence only when ALL competing episodes have known durations,
+// every same-title candidate was checked, and exactly one duration matches
+// closely. Generic "Episode N" titles and popularity are never evidence.
+function alRuntimeDisambiguate(fits, seconds, episodeCount, exhaustive) {
+  if (!exhaustive || Number(episodeCount || 1) !== 1 || !(seconds > 0) ||
+      fits.length < 2 || fits.some(function(f) { return !(f.runtime > 0); })) return null;
+  var close = fits.filter(function(f) {
+    var expected = f.runtime * 60;
+    return Math.abs(seconds - expected) <= Math.max(150, expected * 0.10);
+  });
+  return close.length === 1 ? close[0] : null;
+}
+
 function alNotSure(reason, query) { return { info: null, reason: reason, query: query || "" }; }
 
 function alTvInfo(d, sd, ep, season) {
@@ -1269,9 +1284,12 @@ async function alMatchTv(p, seconds, opts) {
 
   // A show we can't check still blocks one that fits
   var fits = [], why = "", unresolved = "";
+  // We only use runtime to resolve an ambiguous title if no candidates were
+  // ignored or missing from the upstream catalogue response.
+  var runtimeEvidenceComplete = cands.length <= 3;
   for (var i = 0; i < Math.min(3, cands.length); i++) {
     var d = await alTvDetails(cands[i].id);
-    if (!d) continue;
+    if (!d) { runtimeEvidenceComplete = false; continue; }
     var regular = d.seasons.filter(function(n) { return n > 0; });
     var season = p.season, sd = null, ep = null;
     if (season == null) {
@@ -1288,6 +1306,7 @@ async function alMatchTv(p, seconds, opts) {
     }
     if (!sd) {
       sd = await alSeason(d.id, season);
+      if (!sd) runtimeEvidenceComplete = false;
       ep = sd ? sd.episodes.filter(function(e) { return e.n === p.episode; })[0] : null;
     }
     if (!ep) { why = "“" + d.name + "” has no S" + alPad2(season) + "E" + alPad2(p.episode); continue; }
@@ -1303,17 +1322,25 @@ async function alMatchTv(p, seconds, opts) {
       continue;
     }
     if (!alLengthFits(seconds, ep.runtime, p.episodes)) { why = "the video's length doesn't match the episode"; continue; }
-    fits.push({ votes: d.votes, info: alTvInfo(d, sd, ep, season) });
+    fits.push({ votes: d.votes, info: alTvInfo(d, sd, ep, season), runtime: Number(ep.runtime || 0) });
   }
   if (fits.length && unresolved) return alNotSure(unresolved, p.title);
-  if (fits.length === 1) return { info: fits[0].info, query: p.title };
+  if (fits.length === 1) {
+    if (cands.length > 1 && !runtimeEvidenceComplete &&
+        p.year == null && p.episodeYear == null)
+      return alNotSure("some same-title shows could not be verified", p.title);
+    return { info: fits[0].info, query: p.title };
+  }
   if (fits.length > 1) {
     // Votes must not silently decide between a remake and an older show
     // with the same title/S/E when the filename supplies no year.
     if (p.year == null && p.episodeYear == null) {
       var airYears = fits.map(function(x) { return alYearOf(x.info.airDate); }).filter(Boolean);
-      if (airYears.length > 1 && airYears.some(function(y) { return y !== airYears[0]; }))
+      if (airYears.length > 1 && airYears.some(function(y) { return y !== airYears[0]; })) {
+        var runtimeMatch = alRuntimeDisambiguate(fits, seconds, p.episodes, runtimeEvidenceComplete);
+        if (runtimeMatch) return { info: runtimeMatch.info, query: p.title };
         return alNotSure("several shows called “" + p.title + "” fit in different years", p.title);
+      }
     }
     var top = alDominant(fits);
     return top ? { info: top.info, query: p.title } : alNotSure("several shows called “" + p.title + "” fit", p.title);
