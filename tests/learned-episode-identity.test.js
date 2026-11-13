@@ -60,6 +60,13 @@ vm.runInContext(main.slice(from,to),context);
    "An explicit 1997 title year must not inherit 2026 mapping");
  assert.equal(registry.find("Fired Up",null,"episode",newRows,"https://other.cdn.example/"),null,
    "Origin change must require independent verification");
+ const older=registry.learn(newRows,{kind:"episode",alias:"Fired Up",canonicalTitle:"Fired Up",
+   year:1997,imdb:"tt12345678",tmdb:199700,trakt:0,
+   originHost:"a.kvp726.com",evidence:"explicit user choice"});
+ assert.equal(older.length,2,"Keep both confirmed years; never silently overwrite the 2026 identity");
+ assert.equal(registry.find("Fired Up",null,"episode",older,playback.url),null,
+   "An opaque URL on shared CDN cannot distinguish 1997 and 2026 without additional evidence");
+ assert.equal(registry.find("Fired Up",2026,"episode",older,playback.url).tmdb,239156);
  assert(main.includes('sidebar.onMessage("episodeUserSelected", function(info)'),
    "Only explicit manual pick may enter the learning path");
  assert(!main.slice(main.indexOf('sidebar.onMessage("episodeSelected", function(info)'),
