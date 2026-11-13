@@ -1,0 +1,65 @@
+name: Publish EP+ verified-identity beta
+
+on:
+  push:
+    branches: ['fix/verified-series-identity-20261113']
+    paths:
+      - Info.json
+      - .github/workflows/publish-identity-beta.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: epplus-verified-identity-beta
+  cancel-in-progress: false
+
+jobs:
+  beta:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check beta version and full source regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const assert=require('node:assert/strict');
+          const i=require('./Info.json');
+          assert.equal(i.version,'1.3.5-beta.1');
+          assert.equal(i.ghVersion,29);
+          assert.equal(i.ghRepo,'olivergiangvu/iina-episode-info-plus');
+          NODE
+          for test in tests/*.js; do node "$test"; done
+      - name: Build verified installable beta package
+        shell: bash
+        run: |
+          set -euo pipefail
+          ASSET=Episode-Info-Plus-1.3.5-beta.1.iinaplgz
+          zip -q -r "$ASSET" Info.json main.js episode-plus-identity.js \
+            episode-plus-tvmaze.js episode-plus-http.js episode-plus-aios.js \
+            epplus-now-playing.js trusted-series-aliases.js \
+            aio-identity-sidecar.js sidebar.html overlay.html LICENSE
+          unzip -tq "$ASSET"
+          node scripts/verify-plugin-package.js "$ASSET"
+          sha256sum "$ASSET" > SHA256SUMS.txt
+      - name: Publish beta without changing Latest Stable
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG=v1.3.5-beta.1
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "ERROR: immutable beta already published" >&2
+            exit 1
+          fi
+          gh release create "$TAG" \
+            Episode-Info-Plus-1.3.5-beta.1.iinaplgz SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --title "Episode Info+ $TAG — Identity beta" \
+            --notes "IINA direct-install beta. Adds independently verified host-scoped user Correct Match aliases, keeps different-year shows separate, validates AIO authenticated sidecars, and preserves native Now Playing and subtitle functions. Trakt+ remains the only Trakt writer. Stable v1.3.5 is unchanged. Roll back by installing the previous GitHub stable release." \
+            --prerelease --latest=false
