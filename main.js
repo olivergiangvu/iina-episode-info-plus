@@ -6,6 +6,7 @@ const episodePlusTvmaze = require("./episode-plus-tvmaze.js");
 const episodePlusHttp = require("./episode-plus-http.js");
 const episodePlusAios = require("./episode-plus-aios.js");
 const episodePlusNP = require("./epplus-now-playing.js");
+const trustedSeriesAliases = require("./trusted-series-aliases.js");
 // Messages to the overlay and sidebar go through messageSafe()
 const overlay = safeMessenger(iina.overlay, ["loadFile", "onMessage", "show", "hide", "setClickable"]);
 const sidebar = safeMessenger(iina.sidebar, ["loadFile", "onMessage"]);
@@ -1184,10 +1185,70 @@ function alMovieInfo(d) {
   return info;
 }
 
+var AL_LEARNED_ALIAS_PATH="@data/verified-title-mappings.json";
+function alLearnedAliasRows(){
+  try {
+    return trustedSeriesAliases.read(
+      file.exists(AL_LEARNED_ALIAS_PATH)?file.read(AL_LEARNED_ALIAS_PATH):"");
+  } catch(e) { return []; }
+}
+// Only a USER PICK triggers learning. The picked TMDb ID, canonical title,
+// IMDb, premiere year, exact S/E and playback runtime are revalidated against
+// provider records before any future automatic lookup is allowed.
+async function alLearnUserTitleAlias(info){
+  if(!info||info.isMovie||!info.tmdbId||
+     !Number.isInteger(Number(info.season))||
+     !Number.isInteger(Number(info.episode)))return;
+  var hints=alHints(),url=hints.url||hints.path||"";
+  var origin=trustedSeriesAliases.hostOf(url);
+  var parsed=alParseName(hints.mediaTitle||"");
+  if(!origin||!parsed||!parsed.title||parsed.season!==Number(info.season)||
+     parsed.episode!==Number(info.episode)||!alTitleOk(parsed)||
+     !info.showTitle)return;
+  var show=await alTvDetails(Number(info.tmdbId));
+  var year=show&&alYearOf(show.date);
+  if(!show||Number(show.id)!==Number(info.tmdbId)||!year||!/^tt\d{6,10}$/i.test(show.imdb||"")||
+     trustedSeriesAliases.norm(show.name)!==trustedSeriesAliases.norm(info.showTitle)||
+     !show.seasons.includes(parsed.season))return;
+  var sd=await alSeason(show.id,parsed.season);
+  var ep=sd&&sd.episodes.find(function(x){return x.n===parsed.episode;});
+  if(!ep||!alLengthFits(alSeconds(),ep.runtime,1)||alHints().url!==url||alHints().mediaTitle!==hints.mediaTitle)return;
+  var rows=trustedSeriesAliases.learn(alLearnedAliasRows(),{
+    kind:"episode",alias:parsed.title,canonicalTitle:show.name,year:year,
+    imdb:show.imdb,tmdb:show.id,trakt:0,originHost:origin,
+    evidence:"user-confirmed EP+ episode selection"
+  });
+  file.write(AL_LEARNED_ALIAS_PATH,trustedSeriesAliases.encode(rows));
+  log("Remembered verified user-confirmed series alias for host "+origin);
+}
+// Reviewed catalog aliases are verified in two independent catalogs before
+// being used. Failure does not authorize a fuzzy fallback or invented ID.
+async function alReviewedTv(p, seconds, evidence) {
+  if (p.season == null || p.season < 1 || p.episode == null || p.episode < 1)
+    return alNotSure("reviewed series alias needs exact S/E", p.title);
+  var show=await alTvDetails(evidence.tmdb);
+  if (!show || Number(show.id)!==evidence.tmdb ||
+      alYearOf(show.date)!==evidence.year ||
+      String(show.imdb||"").toLowerCase()!==evidence.imdb ||
+      alNorm(show.name)!==alNorm(evidence.canonicalTitle) ||
+      show.seasons.indexOf(p.season)<0)
+    return alNotSure("cross-catalog show identifiers disagree", p.title);
+  var season=await alSeason(show.id,p.season);
+  var episode=season && season.episodes.filter(function(e){return e.n===p.episode;})[0];
+  if (!episode) return alNotSure("verified show has no S/E in TMDB",p.title);
+  if (!alLengthFits(seconds,episode.runtime,p.episodes))
+    return alNotSure("verified episode runtime differs from playback",p.title);
+  var info=alTvInfo(show,season,episode,p.season);
+  info.identitySource="Reviewed alias + TMDB/IMDb verified";
+  return {info:info,query:p.title};
+}
+
 async function alMatchTv(p, seconds, opts) {
   opts = opts || {};
   if (p.seasonWords) return alNotSure("its season numbering may not match TMDB's", p.title);
   if (p.season === 0) return alNotSure("specials are numbered differently everywhere", p.title);
+  var reviewed=trustedSeriesAliases.find(p.title,p.year,"episode",alLearnedAliasRows(),alHints().url||alHints().path);
+  if (reviewed) return alReviewedTv(p,seconds,reviewed);
   var list = await alSearch("tv", p.title, p.year ? { first_air_date_year: p.year } : null);
   var loose = false;
   if (p.year && !(await alTitleCandidates("tv", list, p.title)).length) {
@@ -1734,6 +1795,14 @@ function registerSidebarHandlers() {
     }
     // No extra TMDB calls unless Cast/Up Next were explicitly enabled.
     if ((cardCast || cardNext) && info) loadCardExtras(info).catch(function(e){ });
+  });
+
+  // Only explicit sidebar selections may teach an origin-bound mapping.
+  // Restores and Automatic Lookup emit "episodeSelected", never this event.
+  sidebar.onMessage("episodeUserSelected", function(info) {
+    if (info && !info.isMovie) alLearnUserTitleAlias(info).catch(function(e) {
+      log("EP+ verified alias learning skipped: " + errStr(e));
+    });
   });
 
   sidebar.onMessage("clearEpisode", function() {
