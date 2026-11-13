@@ -18,6 +18,9 @@ const candidates = [
 ];
 const ctx = vm.createContext({
   episodePlusAios: require("../episode-plus-aios.js"),
+  trustedSeriesAliases: require("../trusted-series-aliases.js"),
+  alLearnedAliasRows: () => [],
+  alHints: () => ({url:"",path:""}),
   alSearch: async (_kind, name) => {
     if (/mystic nine/i.test(name)) return candidates;
     if (/fallout/i.test(name)) return [
