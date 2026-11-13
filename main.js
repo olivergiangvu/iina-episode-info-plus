@@ -1516,7 +1516,8 @@ async function alAioVerifiedTv(identity,h,seconds){
   }
   if(!identity.tmdb)return alNotSure("AIO identity has no TMDb show ID",identity.canonicalTitle);
   var show=await alTvDetails(identity.tmdb);
-  if(!show||Number(show.id)!==identity.tmdb||
+  if(!show)return alNotSure("Authenticated AIO TMDb show unavailable",identity.canonicalTitle);
+  if(Number(show.id)!==identity.tmdb||
      alYearOf(show.date)!==identity.year||
      (identity.imdb&&String(show.imdb||"").toLowerCase()!==identity.imdb)||
      !show.seasons.includes(identity.season))
@@ -1719,12 +1720,15 @@ async function autoLookup(d) {
   // Accept a strict IINA AIOStreams player label only as a hint; an
   // independent TVmaze title/S-E/runtime check must still verify the result.
   var sidecarFallback=alAioIdentityContext(alHints());
-  var tvmazeCandidate=sidecarFallback ? {info:{
+  // A demonstrable TMDb ID/year/episode contradiction cannot be overridden
+  // by a title-only TVmaze search. Only missing/unavailable TMDb can fall back.
+  var aiosConflict=!!(sidecarFallback && /conflict|disagrees|missing|runtime/i.test(reply.reason||""));
+  var tvmazeCandidate=aiosConflict ? null : sidecarFallback ? {info:{
     isMovie:false,showTitle:sidecarFallback.canonicalTitle,
     season:sidecarFallback.season,episode:sidecarFallback.episode,
     code:"S"+alPad2(sidecarFallback.season)+"E"+alPad2(sidecarFallback.episode)
   }} : fast;
-  if(!tvmazeCandidate&&aios&&!aios.conflict){
+  if(!tvmazeCandidate&&!sidecarFallback&&aios&&!aios.conflict){
     tvmazeCandidate={info:{
       isMovie:false,showTitle:aios.title,season:aios.season,episode:aios.episode,
       code:"S"+alPad2(aios.season)+"E"+alPad2(aios.episode)
