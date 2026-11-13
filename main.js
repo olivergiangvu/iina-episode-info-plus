@@ -7,6 +7,7 @@ const episodePlusHttp = require("./episode-plus-http.js");
 const episodePlusAios = require("./episode-plus-aios.js");
 const episodePlusNP = require("./epplus-now-playing.js");
 const trustedSeriesAliases = require("./trusted-series-aliases.js");
+const aioIdentitySidecar = require("./aio-identity-sidecar.js");
 // Messages to the overlay and sidebar go through messageSafe()
 const overlay = safeMessenger(iina.overlay, ["loadFile", "onMessage", "show", "hide", "setClickable"]);
 const sidebar = safeMessenger(iina.sidebar, ["loadFile", "onMessage"]);
@@ -1497,7 +1498,42 @@ async function alServerName(url) {
   return name.split(/[\\/]/).pop();
 }
 
+var alAioRetrySequence=0;
+function alAioIdentityContext(h){
+  return aioIdentitySidecar.find({file:file,resolvePath:function(p){return utils.resolvePath(p);}},
+    {url:h&&h.url,path:h&&h.path});
+}
+// The Companion checked a Jellyfin-authenticated AIO episode and exact URL.
+// The plugin independently verifies SAME series across TMDb, exact S/E,
+// premiere year and (when available) IMDb. No URL/title fuzzy fallback.
+async function alAioVerifiedTv(identity,h,seconds){
+  var labels=[h.mediaTitle,h.metadataTitle];
+  for(var k=0;k<labels.length;k++){
+    var parsed=alParseName(labels[k]||"");
+    if(parsed&&parsed.season!=null&&parsed.episode!=null&&
+       (parsed.season!==identity.season||parsed.episode!==identity.episode))
+      return alNotSure("AIO authenticated identity conflicts with IINA episode position","");
+  }
+  if(!identity.tmdb)return alNotSure("AIO identity has no TMDb show ID",identity.canonicalTitle);
+  var show=await alTvDetails(identity.tmdb);
+  if(!show||Number(show.id)!==identity.tmdb||
+     alYearOf(show.date)!==identity.year||
+     (identity.imdb&&String(show.imdb||"").toLowerCase()!==identity.imdb)||
+     !show.seasons.includes(identity.season))
+    return alNotSure("Authenticated AIO identity disagrees with TMDb IDs or premiere year",identity.canonicalTitle);
+  var season=await alSeason(identity.tmdb,identity.season);
+  var ep=season&&season.episodes.find(function(x){return x.n===identity.episode;});
+  if(!ep||!alLengthFits(seconds(),ep.runtime,1))
+    return alNotSure("Authenticated AIO episode missing or runtime disagrees",identity.canonicalTitle);
+  var info=alTvInfo(show,season,ep,identity.season);
+  info.identitySource="AIO authenticated + TMDb verified";
+  return {info:info,query:show.name,from:"aio-authenticated"};
+}
+
 async function alLookup(h, seconds) {
+  var sidecar=alAioIdentityContext(h);
+  if(sidecar)return alAioVerifiedTv(sidecar,h,seconds);
+
   var aios=episodePlusAios.extract(h);
   if(aios&&aios.conflict)return alNotSure("conflicting AIOStreams episode titles", "");
   var link = alSplitLink(h.path || h.url || "");
@@ -1585,7 +1621,7 @@ async function alTvmazeFallback(fast,hints,seconds){
  var info=fast.info;
  var year=episodePlusTvmaze.yearFromPlayerLabel(hints.metadataTitle,info.showTitle) ||
           episodePlusTvmaze.yearFromPlayerLabel(hints.mediaTitle,info.showTitle);
- return episodePlusTvmaze.lookup({
+ var alternative=await episodePlusTvmaze.lookup({
    title:info.showTitle,season:info.season,episode:info.episode,
    year:year||null,seconds:seconds
  },async function(path,params){
@@ -1602,6 +1638,11 @@ async function alTvmazeFallback(fast,hints,seconds){
    if(response.statusCode!==200)throw new Error("TVmaze HTTP "+response.statusCode);
    return response.data || JSON.parse(response.text||"null");
  });
+ // For sidecar-backed fallback require IMDb equality with the authenticated
+ // AIO series, not merely a similar TVmaze show title.
+ if(sidecar&&(!sidecar.imdb||!alternative||
+     alternative.parentImdbId!==sidecar.imdb))return null;
+ return alternative;
 }
 
 // Only answer if that file is still playing
@@ -1632,6 +1673,9 @@ async function autoLookup(d) {
       return;
     }
     fast=episodePlusIdentity.identify(hints,readings,alNorm);
+    // An exact authenticated URL digest supersedes a display-title guess.
+    // Keep explicit route/S-E conflict gates above.
+    if(alAioIdentityContext(hints))fast=null;
     if(fast&&currentVideoUrl===forUrl){
       fast.info.auto={from:fast.from};
       sidebar.postMessage("autoLookupResult",{url:forUrl,info:fast.info,query:fast.query,phase:"provisional"});
@@ -1658,7 +1702,7 @@ async function autoLookup(d) {
       }
     }
     if(reply.info){
-      reply.phase="verified";reply.info.metadataPending=false;reply.info.identitySource="TMDB verified";
+      reply.phase="verified";reply.info.metadataPending=false;reply.info.identitySource=out.from==="aio-authenticated" ? "AIO authenticated + TMDB verified" : "TMDB verified";
       reply.info.auto={from:out.from||(fast&&fast.from)||"TMDB"};
     }
   }catch(e){
@@ -1672,7 +1716,12 @@ async function autoLookup(d) {
   // Use a distinct source if TMDB cannot confirm the episode.
   // Accept a strict IINA AIOStreams player label only as a hint; an
   // independent TVmaze title/S-E/runtime check must still verify the result.
-  var tvmazeCandidate=fast;
+  var sidecarFallback=alAioIdentityContext(alHints());
+  var tvmazeCandidate=sidecarFallback ? {info:{
+    isMovie:false,showTitle:sidecarFallback.canonicalTitle,
+    season:sidecarFallback.season,episode:sidecarFallback.episode,
+    code:"S"+alPad2(sidecarFallback.season)+"E"+alPad2(sidecarFallback.episode)
+  }} : fast;
   if(!tvmazeCandidate&&aios&&!aios.conflict){
     tvmazeCandidate={info:{
       isMovie:false,showTitle:aios.title,season:aios.season,episode:aios.episode,
@@ -2583,6 +2632,19 @@ event.on("iina.file-loaded", function() {
   // The sidebar looks this URL up in its per-URL memory
   try { currentVideoUrl = core.status.url || ""; } catch(e) { currentVideoUrl = ""; }
   sidebar.postMessage("fileChanged", { url: currentVideoUrl });
+  // Companion writes the opt-in descriptor AFTER launching IINA. Retry only
+  // when this exact media is still open and no selection has been made.
+  var forAioUrl=currentVideoUrl;
+  var sequence=++alAioRetrySequence;
+  [2000,5000].forEach(function(delay){
+    setTimeout(function(){
+      if(sequence!==alAioRetrySequence||currentVideoUrl!==forAioUrl||
+         (currentEpisode&&currentEpisode.metadataPending!==true))return;
+      if(!alAioIdentityContext(alHints()))return;
+      ++alAioRetrySequence;
+      autoLookup({url:forAioUrl});
+    },delay);
+  });
   sidebar.postMessage("overlayStatus", { text: "Select an episode, then pause" });
 });
 
