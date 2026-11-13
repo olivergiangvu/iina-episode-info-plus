@@ -1619,8 +1619,10 @@ function alSeconds() {
 async function alTvmazeFallback(fast,hints,seconds){
  if(!fast||!fast.info||fast.info.isMovie||fast.info.season==null||fast.info.episode==null)return null;
  var info=fast.info;
- var year=episodePlusTvmaze.yearFromPlayerLabel(hints.metadataTitle,info.showTitle) ||
-          episodePlusTvmaze.yearFromPlayerLabel(hints.mediaTitle,info.showTitle);
+ var sidecar=alAioIdentityContext(hints);
+ var year=sidecar ? sidecar.year :
+          (episodePlusTvmaze.yearFromPlayerLabel(hints.metadataTitle,info.showTitle) ||
+           episodePlusTvmaze.yearFromPlayerLabel(hints.mediaTitle,info.showTitle));
  var alternative=await episodePlusTvmaze.lookup({
    title:info.showTitle,season:info.season,episode:info.episode,
    year:year||null,seconds:seconds
