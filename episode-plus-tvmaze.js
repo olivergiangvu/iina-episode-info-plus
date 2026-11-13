@@ -33,9 +33,31 @@ async function lookup(input,fetchJSON){
   .filter(function(show){return show&&Number.isInteger(show.id)&&norm(show.name)===norm(title);});
  var y=Number(p.year),haveYear=Number.isInteger(y)&&y>=1900&&y<=2100;
  if(haveYear)candidates=candidates.filter(function(show){return Number(String(show.premiered||"").slice(0,4))===y;});
- // Same-name series are ambiguous without a release year; do not guess.
- if(candidates.length!==1)return null;
- var show=candidates[0],episode=await fetchJSON("/shows/"+show.id+"/episodebynumber",{season:s,number:e});
+ if(!candidates.length)return null;
+ var show=null,episode=null;
+ if(candidates.length===1){
+  show=candidates[0];
+  episode=await fetchJSON("/shows/"+show.id+"/episodebynumber",{season:s,number:e});
+ }else{
+  // Different-year shows can have identical English titles and S/E codes.
+  // Validate all same-title candidates; only a uniquely close exact-episode
+  // runtime may resolve an otherwise ambiguous title. Truncated catalogues,
+  // unknown episode runtimes and close competitors remain unresolved.
+  if(haveYear||results.length>=15||candidates.length>6||!(p.seconds>0))return null;
+  var verified=[];
+  for(var i=0;i<candidates.length;i++){
+   var item=await fetchJSON("/shows/"+candidates[i].id+"/episodebynumber",{season:s,number:e});
+   if(!item)continue;
+   if(Number(item.season)!==s||Number(item.number)!==e||!(item.runtime>0))return null;
+   verified.push({show:candidates[i],episode:item});
+  }
+  var close=verified.filter(function(v){
+   var expected=Number(v.episode.runtime)*60;
+   return Math.abs(Number(p.seconds)-expected)<=Math.max(150,expected*0.10);
+  });
+  if(close.length!==1)return null;
+  show=close[0].show;episode=close[0].episode;
+ }
  if(!episode||Number(episode.season)!==s||Number(episode.number)!==e)return null;
  if(p.seconds>0&&episode.runtime>0){
   var ratio=Number(p.seconds)/(Number(episode.runtime)*60);

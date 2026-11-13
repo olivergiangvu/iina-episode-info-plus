@@ -23,6 +23,11 @@ jobs:
           node --check episode-plus-http.js
           node --check episode-plus-aios.js
           node --check epplus-now-playing.js
+          node --check trusted-series-aliases.js
+          node --check aio-identity-sidecar.js
+          node --check tests/aio-identity-sidecar.test.js
+          node --check tests/aio-sidecar-integration.test.js
+          node --check tests/learned-episode-identity.test.js
           node --check tests/now-playing-integration.test.js
           node --check tests/release-capabilities.test.js
           node --check scripts/verify-plugin-package.js
@@ -34,6 +39,9 @@ jobs:
           node tests/upstream-135-integration.test.js
           node tests/upstream-135-ui-integration.test.js
           node tests/glass-parity.test.js
+          node tests/learned-episode-identity.test.js
+          node tests/aio-identity-sidecar.test.js
+          node tests/aio-sidecar-integration.test.js
       - name: Permanent capability and native Now Playing regression gates
         run: |
           node tests/release-capabilities.test.js
@@ -44,7 +52,7 @@ jobs:
           mkdir -p dist
           V="$(node -p 'require("./Info.json").version')"
           OUT="dist/Episode-Info-Plus-$V.iinaplgz"
-          zip -q -r "$OUT" Info.json main.js episode-plus-identity.js episode-plus-tvmaze.js episode-plus-http.js episode-plus-aios.js epplus-now-playing.js sidebar.html overlay.html LICENSE
+          zip -q -r "$OUT" Info.json main.js episode-plus-identity.js episode-plus-tvmaze.js episode-plus-http.js episode-plus-aios.js epplus-now-playing.js trusted-series-aliases.js aio-identity-sidecar.js sidebar.html overlay.html LICENSE
           unzip -tq "$OUT"
           node scripts/verify-plugin-package.js "$OUT"
       - uses: actions/upload-artifact@v4
