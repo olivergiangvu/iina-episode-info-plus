@@ -174,6 +174,7 @@ const playerHints={
  context.alFromImdb=async function(){throw Error("MediaFusion URL has no IMDb ID");};
  context.alNotSure=function(reason,query){return {info:null,reason:reason,query:query||""};};
  context.alNorm=norm; // main.js normalizer is outside the isolated parser slice.
+ context.alAioIdentityContext=()=>null; // In this isolated legacy fixture no Companion sidecar exists.
  vm.runInContext(main.slice(lookupStart,lookupEnd),context,{filename:"main-lookup.js"});
  const result=await context.alLookup(playerHints,()=>3000);
  // IINA screenshot #aios_title flows through real parser -> TV TMDB lookup,
