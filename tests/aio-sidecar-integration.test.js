@@ -38,6 +38,9 @@ vm.runInContext(source.slice(from,to),context);
  assert.equal(out.info,null,"Playback label S/E vs authenticated context conflict");
  assert(source.includes("var year=sidecar ? sidecar.year"),"TVmaze fallback must use authenticated year");
  assert(source.includes("alternative.parentImdbId!==sidecar.imdb"),"TVmaze fallback must verify IMDb identity");
+ assert(source.includes("var aiosConflict="),"A conflicting TMDb show must prohibit TVmaze title fallback");
+ assert(source.includes("if(!tvmazeCandidate&&!sidecarFallback&&aios&&!aios.conflict)"),
+   "A rejected authenticated context may not silently degrade to a guessed player title");
  assert(source.includes("alAioRetrySequence"),"Companion descriptor arrives after IINA file load");
  console.log("EP+ authenticated sidecar ID/year/S-E/runtime and TVmaze year handoff PASS");
 })().catch(e=>{console.error(e);process.exitCode=1});
